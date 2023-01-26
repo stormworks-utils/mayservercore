@@ -6,8 +6,8 @@ import sys
 import json
 import localinfo
 import os
-import importlib
 import error_handler
+import abstract
 
 log=Logger("server configuration")
 
@@ -82,13 +82,9 @@ def make_abstract(path):
             settings=json.load(file)['settings_msc']['modules']
         except json.JSONDecodeError:
             error_handler.handleFatal(log,"Invalid profile.")
-    for module in settings.keys():
-        try:
-            modulegenerator=importlib.import_module(f'abstractor.{module}.generator')
-            log.info(f"Loaded {module} abstractor")
-        except ModuleNotFoundError:
-            #error_handler.handleFatal(log, f"Unable to load {module} abstractor")
-            log.warn(f"Unable to load {module} abstractor")
-        mod_settings=settings[module]
-        print(mod_settings)
-        modulegenerator.generate(mod_settings)
+    modules=[]
+    for i in settings.keys():
+        if settings[i]['enabled']:
+            modules.append(i)
+    for module in modules:
+            abstract.generate(module,settings[module], modules)
