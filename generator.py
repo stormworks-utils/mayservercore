@@ -83,8 +83,9 @@ def make_abstract(path):
         except json.JSONDecodeError:
             error_handler.handleFatal(log,"Invalid profile.")
     modules=[]
+    generated_modules=[]
     for i in settings.keys():
         if settings[i]['enabled']:
             modules.append(i)
     for module in modules:
-            abstract.generate(module,settings[module], modules)
+            generated_modules.append(abstract.generate(module,settings[module], modules))

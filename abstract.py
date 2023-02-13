@@ -87,7 +87,7 @@ def generate(module,settings, modules):
     log.info(f"Processing complete, found {len(calls)} callbacks and {len(handles)} handlers.")
     code=ast.to_lua_source(vel)
     log.info("Abstractor code generated")
-    return code, calls, handles
+    return code, calls, handles, name, desc
 
 def _recursive_generate(ast_code, prefix, id, settings, callnames, offnames):
     callbacks=[]
@@ -137,12 +137,14 @@ def _recursive_generate(ast_code, prefix, id, settings, callnames, offnames):
     else:
         if tp==astnodes.Function:
             name=ast_code.name.id
-            if name in callbacks:
+            if name.strip() in callnames:
                 name='callback_'+prefix+name
                 callbacks.append(name)
+                ast_code.name.id = name
             if name in offhandle:
                 name='offhandle_'+prefix+name
                 offhandle.append(name)
+                ast_code.name.id = name
         for i in ast_code.__dict__.values():
             if not type(i)==list:
                 i=[i]
