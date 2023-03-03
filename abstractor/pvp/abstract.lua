@@ -19,3 +19,6 @@ end
 
 function onTick()
 end
+
+function httpGet()
+end

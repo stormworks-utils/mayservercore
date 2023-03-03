@@ -6,7 +6,7 @@ from luaparser import ast, astnodes
 import random
 
 callbacks=['onTick', 'onCreate', 'onDestroy','onCustomCommand', 'onChatMessage', 'onPlayerJoin', 'onPlayerSit', 'onCharacterSit', 'onCharacterUnsit', 'onCharacterPickup', 'onEquipmentPickup', 'onEquipmentDrop', 'onCreaturePickup', 'onPlayerRespawn', 'onPlayerLeave', 'onToggleMap', 'onPlayerDie', 'onVehicleSpawn', 'onVehicleLoad', 'onVehicleUnload', 'onVehicleTeleport', 'onVehicleDespawn', 'onSpawnAddonComponent', 'onVehicleDamaged', 'httpReply', 'onFireExtinguished', 'onVehicleUnload', 'onForestFireSpawned', 'onForestFireExtinguised', 'onButtonPress', 'onObjectLoad', 'onObjectUnload', 'onTornado', 'onMeteor', 'onTsunami', 'onWhirlpool', 'onVolcano']
-offhandle=['httpReply']
+offhandle=['httpReply','onFirst']
 
 def generate(module,settings, modules):
     log = Logger('Module proccessor')

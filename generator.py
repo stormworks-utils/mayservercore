@@ -90,12 +90,35 @@ def generate(path, extract=True):
     compiled_modules=""
     make_config(path, extract)
     modules=make_abstract(path)
+    to_handle={}
+    callbacks={}
     for module in modules:
         code, calls, handles, name, desc = module
         compiled_modules+=f'''--{name}: {desc}
-
+        
 {code.strip()}
 
 '''
-        print(calls)
+        for oname in calls.keys():
+            names = calls[oname]
+            for name in names:
+                if oname in callbacks.keys():
+                    callbacks[oname].append(name)
+                else:
+                    callbacks.update({oname: [name]})
+        for oname in handles.keys():
+            names = handles[oname]
+            for name in names:
+                if oname in to_handle.keys():
+                    to_handle[oname].append(name)
+                else:
+                    to_handle.update({oname: [name]})
     compiled_modules=compiled_modules.strip()
+    callback_defs="--callback setup\n\n"
+    for callback in callbacks.keys():
+        calls=callbacks[callback]
+        callback_defs+=f'function {callback}()\n'
+        for call in calls:
+            callback_defs+=f'    {call}()\n'
+        callback_defs+='end\n\n'
+    callback_defs=callback_defs.strip()
