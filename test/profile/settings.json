@@ -1,7 +1,7 @@
 {"properties":
-  {"version": 0.2},
+  {"version": 0.2,"server_shorthand": "msc_test"},
   "settings_msc":
-    {"modules": {"vehicles": {"enabled":true, "antisteal": {"enabled":true, "default":true},"spawncap": {"enabled": true, "default": 2, "player_changeable": false, "admin_changeable": true, "destroy_old": true}}, "pvp": {"enabled": false, "player_changeable": true, "admin_changeable": false, "default": false, "vehicles": false}},
+    {"modules": {"vehicles": {"enabled":true, "antisteal": {"enabled":true, "default":true},"spawncap": {"enabled": true, "default": 2, "player_changeable": false, "admin_changeable": true, "destroy_old": true}}, "pvp": {"enabled": true, "player_changeable": true, "admin_changeable": false, "default": false, "vehicles": false}},
     "player_commands": {"tool": true,"tp": true, "pvp": false},
     "command_alias": {"tp": ["teleport"]},
     "admin_commands": {"pvp": true},

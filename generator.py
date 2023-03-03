@@ -9,13 +9,10 @@ import os
 import error_handler
 import abstract
 
-log=Logger("server configuration")
-
-def make_config(path, extract=True, install=True):
+def make_config(path, extract=True):
+    log = Logger("Configuration file generator")
     profilepath = path.split(".")[0]
     log.info("Starting stage 1 configuration")
-    if not install:
-        log.warn("Installation disabled!")
     if extract:
         log.info("Extracting MSC profile")
         try:
@@ -64,17 +61,14 @@ def make_config(path, extract=True, install=True):
     newsetts+='''</playlists>
 </server_data>'''
     log.info("server_config.xml generated")
-    if install:
-        log.info("Installing...")
-        with open(os.getenv('APPDATA')+"/Stormworks/server_config.xml","w") as config:
-            config.write(newsetts.strip())
-    else:
-        log.info("Install skipped, saving to workdir...")
-        with open("server_config.xml","w") as config:
-            config.write(newsetts.strip())
-    log.info("Generator complete")
+    if not os.path.exists(f"servers/{settings['properties']['server_shorthand']}/"):
+        os.makedirs(f"servers/{settings['properties']['server_shorthand']}/")
+    with open(f"servers/{settings['properties']['server_shorthand']}/server_config.xml","w") as config:
+        config.write(newsetts.strip())
+    log.info("Config generation complete")
 
 def make_abstract(path):
+    log = Logger("Module generator")
     log.info("Starting stage 2 configuration")
     log.info("Loading abstractor configuration")
     with open(path+"/profile/settings.json") as file:
@@ -90,3 +84,17 @@ def make_abstract(path):
     for module in modules:
             generated_modules.append(abstract.generate(module,settings[module], modules))
     return generated_modules
+
+def generate(path, extract=True):
+    log=Logger("Addon compiler")
+    compiled_modules=""
+    make_config(path, extract)
+    modules=make_abstract(path)
+    for module in modules:
+        code, calls, handles, name, desc = module
+        compiled_modules+=f'''--{name}: {desc}
+
+{code.strip()}
+
+'''
+    compiled_modules=compiled_modules.strip()

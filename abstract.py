@@ -3,13 +3,13 @@ import json
 from logger import Logger
 import error_handler
 from luaparser import ast, astnodes
-log=Logger('abstractor')
 import random
 
 callbacks=['onTick', 'onCreate', 'onDestroy','onCustomCommand', 'onChatMessage', 'onPlayerJoin', 'onPlayerSit', 'onCharacterSit', 'onCharacterUnsit', 'onCharacterPickup', 'onEquipmentPickup', 'onEquipmentDrop', 'onCreaturePickup', 'onPlayerRespawn', 'onPlayerLeave', 'onToggleMap', 'onPlayerDie', 'onVehicleSpawn', 'onVehicleLoad', 'onVehicleUnload', 'onVehicleTeleport', 'onVehicleDespawn', 'onSpawnAddonComponent', 'onVehicleDamaged', 'httpReply', 'onFireExtinguished', 'onVehicleUnload', 'onForestFireSpawned', 'onForestFireExtinguised', 'onButtonPress', 'onObjectLoad', 'onObjectUnload', 'onTornado', 'onMeteor', 'onTsunami', 'onWhirlpool', 'onVolcano']
 offhandle=['httpReply']
 
 def generate(module,settings, modules):
+    log = Logger('Module proccessor')
     log.info(f'Started generator for abstraction module "{module}"')
     log.info('Loading layer')
     try:
@@ -47,7 +47,7 @@ def generate(module,settings, modules):
                 if not mod in modules:
                     error_handler.handleFatal(log, f"Module {module} has unmet requirement ({mod})")
 
-    log.info("Requirements resolved")
+    log.info("Requirements validated")
     #create prefix for private vars/functions to make sure theyre not accessible
     prf=''
     for i in range(10):

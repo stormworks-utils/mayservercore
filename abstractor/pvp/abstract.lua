@@ -1,16 +1,11 @@
---###NAME:Vehicle manager
---###DESC:Vehicle management system or tracking vehicle ownership and other useful things.
+--###NAME:PVP
+--###DESC:PVP system to allow disabling vehicle and player damage for certain people
 --###MODID:def_vehicle
 
-antisteal="###CONFIG:antisteal.enabled:false"
-default_antisteal="###CONFIG:antisteal.default:false"
-antisteal_pc='###CONFIG:antisteal.player_changeable:false'
-antisteal_ac='###CONFIG:antisteal.admin_changeable:false'
-spawnlimit='###CONFIG:spawncap.enabled:false'
-default_spawnlimit='###CONFIG:spawncap.default:0'
-spawnlimit_pc='###CONFIG:spawncap.player_changeable:false'
-spawnlimit_ac='###CONFIG:spawncap.admin_changeable:false'
-spawlimit_remove_old='###CONFIG:spawncap.destroy_old:false'
+_player_changeable="###CONFIG:player_changeable:false"
+_admin_changeable="###CONFIG:admin_changeable:false"
+_default="###CONFIG:default:false"
+_vehicles_enabled="###CONFIG:vehicles:false"
 
 _vehicles={}
 
