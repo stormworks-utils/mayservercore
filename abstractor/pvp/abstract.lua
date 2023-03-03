@@ -1,6 +1,6 @@
 --###NAME:PVP
 --###DESC:PVP system to allow disabling vehicle and player damage for certain people
---###MODID:def_vehicle
+--###MODID:def_pvp
 
 _player_changeable="###CONFIG:player_changeable:false"
 _admin_changeable="###CONFIG:admin_changeable:false"

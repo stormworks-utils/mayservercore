@@ -90,14 +90,26 @@ def generate(module,settings, modules):
     return code, calls, handles, name, desc
 
 def _recursive_generate(ast_code, prefix, id, settings, callnames, offnames):
-    callbacks=[]
-    offhandle=[]
+    callbacks= {}
+    offhandle={}
     tp=type(ast_code)
     if tp==list:
         for i in ast_code:
             cb, oh = _recursive_generate(i, prefix, id, settings, callnames, offnames)
-            callbacks += cb
-            offhandle += oh
+            for oname in cb.keys():
+                names = cb[oname]
+                for name in names:
+                    if oname in callbacks.keys():
+                        callbacks[oname].append(name)
+                    else:
+                        callbacks.update({oname: [name]})
+            for oname in oh.keys():
+                names = oh[oname]
+                for name in names:
+                    if oname in offhandle.keys():
+                        offhandle[oname].append(name)
+                    else:
+                        offhandle.update({oname: [name]})
     elif tp==astnodes.Name:
         if ast_code.id[:2]=='__':
             #protected var
@@ -107,17 +119,53 @@ def _recursive_generate(ast_code, prefix, id, settings, callnames, offnames):
             ast_code.id=id+'_'+ast_code.id[1:]
     elif tp==astnodes.Block:
         cb, oh = _recursive_generate(ast_code.body, prefix, id, settings, callnames, offnames)
-        callbacks += cb
-        offhandle += oh
+        for oname in cb.keys():
+            names = cb[oname]
+            for name in names:
+                if oname in callbacks.keys():
+                    callbacks[oname].append(name)
+                else:
+                    callbacks.update({oname: [name]})
+        for oname in oh.keys():
+            names = oh[oname]
+            for name in names:
+                if oname in offhandle.keys():
+                    offhandle[oname].append(name)
+                else:
+                    offhandle.update({oname: [name]})
     elif tp == astnodes.Chunk:
         cb, oh = _recursive_generate(ast_code.body, prefix, id, settings, callnames, offnames)
-        callbacks += cb
-        offhandle += oh
+        for oname in cb.keys():
+            names = cb[oname]
+            for name in names:
+                if oname in callbacks.keys():
+                    callbacks[oname].append(name)
+                else:
+                    callbacks.update({oname: [name]})
+        for oname in oh.keys():
+            names = oh[oname]
+            for name in names:
+                if oname in offhandle.keys():
+                    offhandle[oname].append(name)
+                else:
+                    offhandle.update({oname: [name]})
     elif tp == astnodes.Assign:
         for i in ast_code.targets:
             cb, oh = _recursive_generate(i, prefix, id, settings, callnames, offnames)
-            callbacks += cb
-            offhandle += oh
+            for oname in cb.keys():
+                names = cb[oname]
+                for name in names:
+                    if oname in callbacks.keys():
+                        callbacks[oname].append(name)
+                    else:
+                        callbacks.update({oname: [name]})
+            for oname in oh.keys():
+                names = oh[oname]
+                for name in names:
+                    if oname in offhandle.keys():
+                        offhandle[oname].append(name)
+                    else:
+                        offhandle.update({oname: [name]})
         for i in ast_code.values:
             if type(i)==astnodes.String:
                 if i.s[:9]=='###CONFIG':
@@ -132,18 +180,39 @@ def _recursive_generate(ast_code, prefix, id, settings, callnames, offnames):
                     i.s=str(val).lower()
             else:
                 cb, oh = _recursive_generate(i, prefix, id, settings, callnames, offnames)
-                callbacks += cb
-                offhandle += oh
+                for oname in cb.keys():
+                    names = cb[oname]
+                    for name in names:
+                        if oname in callbacks.keys():
+                            callbacks[oname].append(name)
+                        else:
+                            callbacks.update({oname: [name]})
+                for oname in oh.keys():
+                    names = oh[oname]
+                    for name in names:
+                        if oname in offhandle.keys():
+                            offhandle[oname].append(name)
+                        else:
+                            offhandle.update({oname: [name]})
     else:
         if tp==astnodes.Function:
             name=ast_code.name.id
             if name.strip() in callnames:
+                oname=name
                 name='callback_'+prefix+name
-                callbacks.append(name)
+                if oname in callbacks.keys():
+                    callbacks[oname].append(name)
+                else:
+                    callbacks.update({oname:[name]})
                 ast_code.name.id = name
             if name in offhandle:
+                oname=name
                 name='offhandle_'+prefix+name
                 offhandle.append(name)
+                if oname in callbacks.keys():
+                    callbacks[oname].append(name)
+                else:
+                    callbacks.update({oname:[name]})
                 ast_code.name.id = name
         for i in ast_code.__dict__.values():
             if not type(i)==list:
@@ -151,6 +220,18 @@ def _recursive_generate(ast_code, prefix, id, settings, callnames, offnames):
             for j in i:
                 if 'luaparser.astnodes.' in str(type(j)):
                     cb, oh=_recursive_generate(j, prefix, id, settings, callnames, offnames)
-                    callbacks+=cb
-                    offhandle+=oh
+                    for oname in cb.keys():
+                        names = cb[oname]
+                        for name in names:
+                            if oname in callbacks.keys():
+                                callbacks[oname].append(name)
+                            else:
+                                callbacks.update({oname: [name]})
+                    for oname in oh.keys():
+                        names = oh[oname]
+                        for name in names:
+                            if oname in offhandle.keys():
+                                offhandle[oname].append(name)
+                            else:
+                                offhandle.update({oname: [name]})
     return callbacks, offhandle

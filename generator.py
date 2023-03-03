@@ -97,4 +97,5 @@ def generate(path, extract=True):
 {code.strip()}
 
 '''
+        print(calls)
     compiled_modules=compiled_modules.strip()
