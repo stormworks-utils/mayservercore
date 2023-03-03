@@ -10,15 +10,15 @@ offhandle=['httpReply','onFirst']
 
 def generate(module,settings, modules):
     log = Logger('Module proccessor')
-    log.info(f'Started generator for abstraction module "{module}"')
+    log.info(f'Started generator for module "{module}"')
     log.info('Loading layer')
     try:
-        with open(f"abstractor/{module}/abstract.lua",'r') as abstraction_fs:
-            abstraction_full=abstraction_fs.read()
+        with open(f"modules/{module}/module.lua", 'r') as module_fs:
+            module_full=module_fs.read()
     except :
-        error_handler.handleFatal(log,"Unable to fetch abstracts")
+        error_handler.handleFatal(log,"Unable to fetch module")
     try:
-        with open(f"abstractor/{module}/require.msc",'r') as require_fs:
+        with open(f"modules/{module}/require.msc", 'r') as require_fs:
             requires=require_fs.readlines()
     except :
         error_handler.handleFatal(log,"Unable to fetch requirements")
@@ -66,7 +66,7 @@ def generate(module,settings, modules):
     desc='None'
     id=prefix #MODID is used for hidden var prefixes, so if no MODID is given, use prefix to avoid collisions
 
-    for i in abstraction_full.split("\n"):
+    for i in module_full.split("\n"):
         if i[:5]=='--###':
             tagfull=i[5:].split(':',1)
             tag=tagfull[0]
@@ -80,13 +80,13 @@ def generate(module,settings, modules):
                 prefix=prefix+id+'_'
     log.info("Starting stage two parse")
 
-    vel=ast.parse(abstraction_full)
+    vel=ast.parse(module_full)
     log.info("AST generated")
 
     calls, handles=_recursive_generate(vel, prefix, id, settings, callbacks, offhandle)
     log.info(f"Processing complete, found {len(calls)} callbacks and {len(handles)} handlers.")
     code=ast.to_lua_source(vel)
-    log.info("Abstractor code generated")
+    log.info("Module code generated")
     return code, calls, handles, name, desc
 
 def _recursive_generate(ast_code, prefix, id, settings, callnames, offnames):

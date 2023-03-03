@@ -7,7 +7,7 @@ import json
 import localinfo
 import os
 import error_handler
-import abstract
+import modules as module_gen
 
 callback_args = {"onTick": ["game_ticks"], "onCreate": ['is_world_create'], 'onDestroy': [],
                  "onCustomCommand": ['full_message', 'user_peer_id', 'is_admin', 'is_auth', 'command'],
@@ -104,10 +104,10 @@ def make_config(path, extract=True):
     log.info("Config generation complete")
 
 
-def make_abstract(path):
+def make_module(path):
     log = Logger("Module generator")
     log.info("Starting stage 2 configuration")
-    log.info("Loading abstractor configuration")
+    log.info("Loading modules configuration")
     with open(path + "/profile/settings.json") as file:
         try:
             settings = json.load(file)['settings_msc']['modules']
@@ -119,7 +119,7 @@ def make_abstract(path):
         if settings[i]['enabled']:
             modules.append(i)
     for module in modules:
-        generated_modules.append(abstract.generate(module, settings[module], modules))
+        generated_modules.append(module_gen.generate(module, settings[module], modules))
     return generated_modules
 
 
@@ -127,7 +127,7 @@ def generate(path, extract=True):
     log = Logger("Addon compiler")
     compiled_modules = ""
     make_config(path, extract)
-    modules = make_abstract(path)
+    modules = make_module(path)
     to_handle = {}
     callbacks = {}
     for module in modules:
