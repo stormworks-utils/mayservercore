@@ -89,3 +89,4 @@ def make_abstract(path):
             modules.append(i)
     for module in modules:
             generated_modules.append(abstract.generate(module,settings[module], modules))
+    return generated_modules

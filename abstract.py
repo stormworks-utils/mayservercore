@@ -66,7 +66,7 @@ def generate(module,settings, modules):
     desc='None'
     id=prefix #MODID is used for hidden var prefixes, so if no MODID is given, use prefix to avoid collisions
 
-    for i in abstraction_full.split():
+    for i in abstraction_full.split("\n"):
         if i[:5]=='--###':
             tagfull=i[5:].split(':',1)
             tag=tagfull[0]
