@@ -102,13 +102,14 @@ def make_config(path, extract=True):
     with open(f"servers/{settings['properties']['server_shorthand']}/server_config.xml", "w") as config:
         config.write(newsetts.strip())
     log.info("Config generation complete")
-
+    print(profilepath)
+    return profilepath
 
 def make_module(path):
     log = Logger("Module generator")
     log.info("Starting stage 2 configuration")
     log.info("Loading modules configuration")
-    with open(path + "/profile/settings.json") as file:
+    with open(path + "/settings.json") as file:
         try:
             settings = json.load(file)['settings_msc']['modules']
         except json.JSONDecodeError:
@@ -126,7 +127,7 @@ def make_module(path):
 def generate(path, extract=True):
     log = Logger("Addon compiler")
     compiled_modules = ""
-    make_config(path, extract)
+    path=make_config(path, extract)
     modules = make_module(path)
     to_handle = {}
     callbacks = {}
