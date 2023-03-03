@@ -82,7 +82,7 @@ def make_config(path, extract=True):
         newsetts += f'{k}="{v}" '
     newsetts += '''>\n<admins>\n'''
     for i in admins:
-        newsetts += f'<id value = "{i}"/>\n'
+        newsetts += f'<id value="{i}"/>\n'
     newsetts += '''</admins>\n<authorized/>\n<blacklist/>\n<whitelist/>\n<playlists>\n'''
     for k in settings["default_addons"].keys():
         v = settings["default_addons"][k]
