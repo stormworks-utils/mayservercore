@@ -1,2 +1,4 @@
+from pathlib import Path
+
 import generator
-generator.generate("test", extract=False)
+generator.generate(Path("test"), extract=False)
