@@ -104,7 +104,6 @@ def make_config(path: Path, extract=True):
     ET.indent(tree, '    ')
     tree.write(server_profile / 'server_config.xml', xml_declaration=True, encoding='UTF-8')
     log.info("Config generation complete")
-    print(profile_path)
     return profile_path
 
 def make_module(path: Path):
@@ -134,7 +133,7 @@ def generate(path: Path, extract=True):
     to_handle = {}
     callbacks = {}
     for module in modules:
-        code, calls, handles, name, desc = module
+        code, calls, handles, functions, name, desc = module
         compiled_modules += f'''--{name}: {desc}
         
 {code.strip()}
