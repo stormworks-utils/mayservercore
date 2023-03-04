@@ -5,9 +5,10 @@ from logger import Logger
 import sys
 import json
 import localinfo
-import os
 import error_handler
 import modules as module_gen
+from pathlib import Path
+import xml.etree.ElementTree as ET
 
 callback_args = {"onTick": ["game_ticks"], "onCreate": ['is_world_create'], 'onDestroy': [],
                  "onCustomCommand": ['full_message', 'user_peer_id', 'is_admin', 'is_auth', 'command'],
@@ -45,71 +46,72 @@ callback_args = {"onTick": ["game_ticks"], "onCreate": ['is_world_create'], 'onD
                  'onVolcano':['transform']}
 
 
-def make_config(path, extract=True):
+def make_config(path: Path, extract=True):
     log = Logger("Configuration file generator")
-    profilepath = path.split(".")[0]
+    profile_path: Path = path
+    if extract:
+        profile_path = Path(path.stem)
     log.info("Starting stage 1 configuration")
     if extract:
         log.info("Extracting MSC profile")
         try:
             with zipfile.ZipFile(path, 'r') as zip_ref:
-                zip_ref.extractall(profilepath)
+                zip_ref.extractall(profile_path)
         except:
             error_handler.handleFatal(log, "Unable to extract MSC profile")
     else:
         log.info("Skipping extraction")
     log.info("Loading configuration")
-    profilepath = profilepath + '/profile'
+    profile_path = profile_path / 'profile'
 
-    with open(profilepath + "/settings.json") as file:
+    with open(profile_path / 'settings.json') as file:
         try:
             settings = json.load(file)
         except json.JSONDecodeError:
             error_handler.handleFatal(log, "Invalid profile.")
-    if float(settings['properties']['version']) < localinfo.version():
-        log.warn(f"Profile version out of date! (msc {localinfo.version()}, prof {settings['properties']['version']})")
-    if float(settings['properties']['version']) > localinfo.version():
-        log.warn(f"MSC version out of date! (msc {localinfo.version()}, prof {settings['properties']['version']})")
+    settings_version = float(settings['properties']['version'])
+    if settings_version < localinfo.version():
+        log.warn(f"Profile version out of date! (msc {localinfo.version()}, prof {settings_version})")
+    if settings_version > localinfo.version():
+        log.warn(f"MSC version out of date! (msc {localinfo.version()}, prof {settings_version})")
+
     log.info("Building server_config.xml")
-    admins = settings['settings_msc']['admins']
+    xml_config: ET.Element = ET.Element('server_data', attrib={'port': '25564'})
 
-    newsetts = '''
-<?xml version="1.0" encoding="UTF-8"?>
-<server_data port="25564" '''
-
-    for k in settings["settings_server"].keys():
-        v = settings["settings_server"][k]
-        newsetts += f'{k}="{v}" '
-    newsetts += '''>\n<admins>\n'''
-    for i in admins:
-        newsetts += f'<id value="{i}"/>\n'
-    newsetts += '''</admins>\n<authorized/>\n<blacklist/>\n<whitelist/>\n<playlists>\n'''
-    for k in settings["default_addons"].keys():
-        v = settings["default_addons"][k]
+    for k, v in settings["settings_server"].items():
+        xml_config.attrib[k] = str(v)
+    admin_config: ET.SubElement = ET.SubElement(xml_config, 'admins')
+    for i in settings['settings_msc']['admins']:
+        ET.SubElement(admin_config, 'id', attrib={'value': i})
+    ET.SubElement(xml_config, 'authorized')
+    ET.SubElement(xml_config, 'blacklist')
+    ET.SubElement(xml_config, 'whitelist')
+    playlists_config: ET.SubElement = ET.SubElement(xml_config, 'playlists')
+    for k, v in settings["default_addons"].items():
         if v:
             if "dlc" in k:
-                newsetts += f'<path path="rom/data/missions/{k}"/>\n'
+                ET.SubElement(playlists_config, 'path', attrib={'path': f'rom/data/missions/{k}'})
             else:
-                newsetts += f'<path path="rom/data/missions/default_{k}"/>\n'
+                ET.SubElement(playlists_config, 'path', attrib={'path': f'rom/data/missions/default_{k}'})
     for k in settings["extra_addons"]:
-        newsetts += f'<path path="rom/data/missions/{k}"/>\n'
+        ET.SubElement(playlists_config, 'path', attrib={'path': f'rom/data/missions/{k}'})
 
-    newsetts += '''</playlists>
-</server_data>'''
     log.info("server_config.xml generated")
-    if not os.path.exists(f"servers/{settings['properties']['server_shorthand']}/"):
-        os.makedirs(f"servers/{settings['properties']['server_shorthand']}/")
-    with open(f"servers/{settings['properties']['server_shorthand']}/server_config.xml", "w") as config:
-        config.write(newsetts.strip())
+    server_profile: Path = Path('servers') / settings['properties']['server_shorthand']
+    if not server_profile.exists():
+        server_profile.mkdir(parents=True)
+    tree: ET.ElementTree = ET.ElementTree(xml_config)
+    ET.indent(tree, '    ')
+    tree.write(server_profile / 'server_config.xml', xml_declaration=True, encoding='UTF-8')
     log.info("Config generation complete")
-    print(profilepath)
-    return profilepath
+    print(profile_path)
+    return profile_path
 
-def make_module(path):
+def make_module(path: Path):
     log = Logger("Module generator")
     log.info("Starting stage 2 configuration")
     log.info("Loading modules configuration")
-    with open(path + "/settings.json") as file:
+    with open(path / 'settings.json') as file:
         try:
             settings = json.load(file)['settings_msc']['modules']
         except json.JSONDecodeError:
@@ -124,11 +126,11 @@ def make_module(path):
     return generated_modules
 
 
-def generate(path, extract=True):
+def generate(path: Path, extract=True):
     log = Logger("Addon compiler")
     compiled_modules = ""
-    path=make_config(path, extract)
-    modules = make_module(path)
+    profile_path = make_config(path, extract)
+    modules = make_module(profile_path)
     to_handle = {}
     callbacks = {}
     for module in modules:
