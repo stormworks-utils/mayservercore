@@ -102,7 +102,6 @@ def make_config(path, extract=True):
     with open(f"servers/{settings['properties']['server_shorthand']}/server_config.xml", "w") as config:
         config.write(newsetts.strip())
     log.info("Config generation complete")
-    print(profilepath)
     return profilepath
 
 def make_module(path):
@@ -132,7 +131,7 @@ def generate(path, extract=True):
     to_handle = {}
     callbacks = {}
     for module in modules:
-        code, calls, handles, name, desc = module
+        code, calls, handles, functions, name, desc = module
         compiled_modules += f'''--{name}: {desc}
         
 {code.strip()}
