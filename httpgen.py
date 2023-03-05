@@ -1,4 +1,4 @@
-base_function = '''
+base_function='''
 function mschttp.NAME(msgtype, data)
     msgtype='PREFIX'+msgtyp
     data={['type']=msgtype,['data']=data}
@@ -11,11 +11,8 @@ function mschttp.NAME(msgtype, data)
     server.httpGet(PORT, "/mschttp?data=" .. json)
 end'''
 
-
-def generate_http_calls(calls, port):
-    string = '''
---http calls
-
+def generate_http_calls(calls,port):
+    string='''
 mschttp={}
 function mschttp.to_json(value)
     local result = ""
@@ -54,7 +51,7 @@ function mschttp.escape(s)
 end
 function mschttp.from_json(json)
     local pos, current, escape_characters = 0, "", {a="\a", b="\b", f="\f", n="\n", r="\r", t="\t", v="\v"}
-
+    
     function advance()
         pos = pos + 1
         current = json:sub(pos, pos)
@@ -62,7 +59,7 @@ function mschttp.from_json(json)
             current = nil
         end
     end
-
+    
     function decode_string()
         local result = ""
         advance()
@@ -79,7 +76,7 @@ function mschttp.from_json(json)
         advance()
         return result
     end
-
+    
     function decode_object()
         local result
         if current == "[" then
@@ -130,12 +127,9 @@ function mschttp.from_json(json)
     end
     advance()
     return decode_object()
-end
-'''
+end'''
     for name in calls:
-        prefix = name.split('_', 1)[1]
-        string += base_function.replace('NAME', name).replace('PREFIX', prefix).replace('PORT', str(port))
-        string += '\n'
+        prefix=name.split('_',1)[1]
+        string+=base_function.replace('NAME', name).replace('PREFIX', prefix).replace('PORT', str(port))
+        string+='\n'
     return string
-
-
