@@ -13,38 +13,38 @@ import httpgen
 
 callback_args = {"onTick": ["game_ticks"], "onCreate": ['is_world_create'], 'onDestroy': [],
                  "onCustomCommand": ['full_message', 'user_peer_id', 'is_admin', 'is_auth', 'command'],
-                 'onChatMessage':['peer_id', 'sender_name', 'message'],
-                 'onPlayerJoin':['steam_id', 'name', 'peer_id', 'is_admin', 'is_auth'],
-                 'onPlayerSit':['peer_id', 'vehicle_id', 'seat_name'],
-                 'onPlayerUnsit':['peer_id', 'vehicle_id', 'seat_name'],
-                 'onCharacterSit':['object_id', 'vehicle_id', 'seat_name'],
-                 'onCharacterUnsit':['object_id', 'vehicle_id', 'seat_name'],
-                 'onCharacterPickup':['object_id_actor', 'object_id_target'],
-                 'onEquipmentPickup':['object_id_actor', 'object_id_target', 'EQUIPMENT_ID'],
-                 'onEquipmentDrop':['object_id_actor', 'object_id_target', 'EQUIPMENT_ID'],
-                 'onCreaturePickup':['object_id_actor', 'object_id_target', 'CREATURE_TYPE'],
-                 'onPlayerRespawn':['peer_id'],
-                 'onPlayerLeave':['steam_id', 'name', 'peer_id', 'is_admin', 'is_auth'],
-                 'onToggleMap':['peer_id', 'is_open'],
-                 'onPlayerDie':['steam_id', 'name', 'peer_id', 'is_admin', 'is_auth'],
-                 'onVehicleSpawn':['vehicle_id', 'peer_id', 'x', 'y', 'z', 'cost'],
-                 'onVehicleDespawn':['vehicle_id', 'peer_id'],
-                 'onVehicleLoad':['vehicle_id'],
-                 'onVehicleUnload':['vehicle_id'],
-                 'onVehicleTeleport':['vehicle_id', 'peer_id', 'x', 'y', 'z'],
-                 'onObjectLoad':['object_id'],
-                 'onObjectUnload':['object_id'],
-                 'onButtonPress':['vehicle_id', 'peer_id', 'button_name', 'is_pressed'],
-                 'onSpawnAddonComponent':['object_id/vehicle_id', 'component_name', 'TYPE_STRING', 'addon_index'],
-                 'onVehicleDamaged':['vehicle_id', 'damage_amount', 'voxel_x', 'voxel_y', 'voxel_z', 'body_index'],
-                 'onFireExtinguished':['fire_x', 'fire_y', 'fire_z'],
-                 'onForestFireSpawned':['fire_objective_id', 'fire_x', 'fire_y', 'fire_z'],
-                 'onForestFireExtinguished':['fire_objective_id', 'fire_x', 'fire_y', 'fire_z'],
-                 'onTornado':['transform'],
-                 'onMeteor':['transform', 'magnitude'],
-                 'onTsunami':['transform', 'magnitude'],
-                 'onWhirlpool':['transform', 'magnitude'],
-                 'onVolcano':['transform']}
+                 'onChatMessage': ['peer_id', 'sender_name', 'message'],
+                 'onPlayerJoin': ['steam_id', 'name', 'peer_id', 'is_admin', 'is_auth'],
+                 'onPlayerSit': ['peer_id', 'vehicle_id', 'seat_name'],
+                 'onPlayerUnsit': ['peer_id', 'vehicle_id', 'seat_name'],
+                 'onCharacterSit': ['object_id', 'vehicle_id', 'seat_name'],
+                 'onCharacterUnsit': ['object_id', 'vehicle_id', 'seat_name'],
+                 'onCharacterPickup': ['object_id_actor', 'object_id_target'],
+                 'onEquipmentPickup': ['object_id_actor', 'object_id_target', 'EQUIPMENT_ID'],
+                 'onEquipmentDrop': ['object_id_actor', 'object_id_target', 'EQUIPMENT_ID'],
+                 'onCreaturePickup': ['object_id_actor', 'object_id_target', 'CREATURE_TYPE'],
+                 'onPlayerRespawn': ['peer_id'],
+                 'onPlayerLeave': ['steam_id', 'name', 'peer_id', 'is_admin', 'is_auth'],
+                 'onToggleMap': ['peer_id', 'is_open'],
+                 'onPlayerDie': ['steam_id', 'name', 'peer_id', 'is_admin', 'is_auth'],
+                 'onVehicleSpawn': ['vehicle_id', 'peer_id', 'x', 'y', 'z', 'cost'],
+                 'onVehicleDespawn': ['vehicle_id', 'peer_id'],
+                 'onVehicleLoad': ['vehicle_id'],
+                 'onVehicleUnload': ['vehicle_id'],
+                 'onVehicleTeleport': ['vehicle_id', 'peer_id', 'x', 'y', 'z'],
+                 'onObjectLoad': ['object_id'],
+                 'onObjectUnload': ['object_id'],
+                 'onButtonPress': ['vehicle_id', 'peer_id', 'button_name', 'is_pressed'],
+                 'onSpawnAddonComponent': ['object_id/vehicle_id', 'component_name', 'TYPE_STRING', 'addon_index'],
+                 'onVehicleDamaged': ['vehicle_id', 'damage_amount', 'voxel_x', 'voxel_y', 'voxel_z', 'body_index'],
+                 'onFireExtinguished': ['fire_x', 'fire_y', 'fire_z'],
+                 'onForestFireSpawned': ['fire_objective_id', 'fire_x', 'fire_y', 'fire_z'],
+                 'onForestFireExtinguished': ['fire_objective_id', 'fire_x', 'fire_y', 'fire_z'],
+                 'onTornado': ['transform'],
+                 'onMeteor': ['transform', 'magnitude'],
+                 'onTsunami': ['transform', 'magnitude'],
+                 'onWhirlpool': ['transform', 'magnitude'],
+                 'onVolcano': ['transform']}
 
 
 def make_config(path: Path, extract=True):
@@ -107,6 +107,7 @@ def make_config(path: Path, extract=True):
     log.info("Config generation complete")
     return profile_path
 
+
 def make_module(path: Path):
     log = Logger("Module generator")
     log.info("Starting stage 2 configuration")
@@ -138,7 +139,7 @@ def generate(path: Path, extract=True, http_port=1000):
     for module in modules:
         code, calls, handles, c_func, name, desc = module
         compiled_modules += f'''--{name}: {desc}
-        
+
 {code.strip()}
 
 '''
@@ -164,17 +165,21 @@ def generate(path: Path, extract=True, http_port=1000):
                 else:
                     functions.update({oname: [name]})
     compiled_modules = compiled_modules.strip()
-    callback_defs = "--callback setup\n\n"
+    callback_defs = "\n\n--callback setup\n\n"
     for callback in callbacks.keys():
-        arguments=callback_args[callback]
-        argument_string=', '.join(arguments)
+        arguments = callback_args[callback]
+        argument_string = ', '.join(arguments)
         calls = callbacks[callback]
         callback_defs += f'function {callback}({argument_string})\n'
         for call in calls:
             callback_defs += f'    {call}({argument_string})\n'
         callback_defs += 'end\n\n'
-    callback_defs = callback_defs.strip()
-    print(functions)
-    print(calls)
-    print(compiled_modules)
-    httpgen.generate_http_calls(functions['httpGet'], http_port)
+    callback_defs = callback_defs
+    script = ''
+    script += compiled_modules
+    script += callback_defs
+    if 'httpGet' in functions.keys():
+        http = httpgen.generate_http_calls(functions['httpGet'], http_port)
+        script += http
+    with open('test.lua', 'w') as x:
+        x.write(script)
