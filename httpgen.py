@@ -24,12 +24,12 @@ function mschttp.to_json(value)
         end
         if is_numeric then
             for _, v in ipairs(value) do
-                result = result .. "," .. to_json(v)
+                result = result .. "," .. mschttp.to_json(v)
             end
             result = "[" .. result:sub(2,#result) .. "]"
         else
             for k,v in pairs(value) do
-                result = result .. "," .. to_json(k) .. ":" .. to_json(v)
+                result = result .. "," .. mschttp.to_json(k) .. ":" .. mschttp.to_json(v)
             end
             result = "{" .. result:sub(2,#result) .. "}"
         end
@@ -37,8 +37,10 @@ function mschttp.to_json(value)
         result = tostring(value)
     elseif type(value) == "boolean" then
         result = value and "true" or "false"
+    elseif value == nil then
+        result = "none"
     else
-        result = '"' .. tostring(value) .. '"'
+        result = string.format("%q", tostring(value)):gsub("\n", "n")
     end
     return result
 end
