@@ -44,6 +44,11 @@ function mschttp.to_json(value)
     end
     return result
 end
+function mschttp.escape(s)
+    return (s:gsub("[^%w%d%-%._~]", function(c)
+        return string.format("%%%02X", string.byte(c))
+    end))
+end
 function mschttp.from_json(json)
     local pos, current, escape_characters = 0, "", {a="\a", b="\b", f="\f", n="\n", r="\r", t="\t", v="\v"}
     
@@ -122,13 +127,6 @@ function mschttp.from_json(json)
     end
     advance()
     return decode_object()
-end
-mschttp.uri_reserved = { ["|"] = "|22", [" "] = "|20", ["!"] = "|21", ["#"] = "|23", ["$"] = "|24", ["%"] = "|25", ["&"] = "|26",
-    ["'"] = "|27", ["("] = "|28", [")"] = "|29", ["*"] = "|2a", ["+"] = "|2b", [","] = "|2c", ["/"] = "|2f", [":"] = "|3a",
-    [";"] = "|3b", ["="] = "|3d", ["?"] = "|3f", ["@"] = "|41", ["["] = "|5b", ["]"] = "|5d", ['"'] = '|5e', ["\\\\"] = "|5f", ["’"] = "|5g"}
-function mschttp.escape(s)
-    result = (s:gsub('[%,%^%$%(%)%%% %.%[%]%*%+%-%?%|]', '%%%1'))
-    return result
 end'''
     for name in calls:
         prefix=name.split('_',1)[1]
