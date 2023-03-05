@@ -85,7 +85,7 @@ def generate(module,settings, modules):
     log.info("AST generated")
 
     calls, handles, functions =_recursive_generate(vel, prefix, id, settings, callbacks, offhandle, c_function)
-    log.info(f"Processing complete, found {len(calls)} callbacks and {len(handles)} handlers.")
+    log.info(f"Processing complete, found {len(calls)} callbacks, {len(functions)} special function calls, and {len(handles)} handlers.")
     code=ast.to_lua_source(vel)
     log.info("Module code generated")
     return code, calls, handles, functions, name, desc
@@ -180,7 +180,7 @@ def _recursive_generate(ast_code, prefix, id, settings, callnames, offnames, c_f
                 if idx==b and value==a:
                     oname = idx
                     name = 'mscfunction_' + prefix + idx
-                    ast_code.value.id="msc"
+                    ast_code.value.id="mschttp"
                     ast_code.idx.id=name
                     if oname in functions.keys():
                         functions[oname].append(name)

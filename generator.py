@@ -9,6 +9,7 @@ import error_handler
 import modules as module_gen
 from pathlib import Path
 import xml.etree.ElementTree as ET
+import httpgen
 
 callback_args = {"onTick": ["game_ticks"], "onCreate": ['is_world_create'], 'onDestroy': [],
                  "onCustomCommand": ['full_message', 'user_peer_id', 'is_admin', 'is_auth', 'command'],
@@ -125,15 +126,17 @@ def make_module(path: Path):
     return generated_modules
 
 
-def generate(path: Path, extract=True):
+def generate(path: Path, extract=True, http_port=1000):
     log = Logger("Addon compiler")
     compiled_modules = ""
     profile_path = make_config(path, extract)
     modules = make_module(profile_path)
+    print(modules)
     to_handle = {}
     callbacks = {}
+    functions = {}
     for module in modules:
-        code, calls, handles, functions, name, desc = module
+        code, calls, handles, c_func, name, desc = module
         compiled_modules += f'''--{name}: {desc}
         
 {code.strip()}
@@ -153,6 +156,13 @@ def generate(path: Path, extract=True):
                     to_handle[oname].append(name)
                 else:
                     to_handle.update({oname: [name]})
+        for oname in c_func.keys():
+            names = c_func[oname]
+            for name in names:
+                if oname in functions.keys():
+                    functions[oname].append(name)
+                else:
+                    functions.update({oname: [name]})
     compiled_modules = compiled_modules.strip()
     callback_defs = "--callback setup\n\n"
     for callback in callbacks.keys():
@@ -164,3 +174,7 @@ def generate(path: Path, extract=True):
             callback_defs += f'    {call}({argument_string})\n'
         callback_defs += 'end\n\n'
     callback_defs = callback_defs.strip()
+    print(functions)
+    print(calls)
+    print(compiled_modules)
+    httpgen.generate_http_calls(functions['httpGet'], http_port)
