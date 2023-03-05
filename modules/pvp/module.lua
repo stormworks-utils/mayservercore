@@ -15,10 +15,8 @@ end
 
 function _toggle_pvp(__id)
     _vehicles[__id]['pvp']=__toggle(_vehicles[_id]['pvp'])
+    server.httpGet()
 end
 
 function onTick()
-end
-
-function httpGet()
 end
