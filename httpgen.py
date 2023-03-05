@@ -12,7 +12,8 @@ function mschttp.NAME(msgtype, data)
 end'''
 
 def generate_http_calls(calls,port):
-    string='''
+    string='''--http calls
+
 mschttp={}
 function mschttp.to_json(value)
     local result = ""
