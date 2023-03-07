@@ -206,4 +206,18 @@ def generate(path: Path, extract=True, http_port=1000):
     for module in modules:
         has_ext=(Path('modules')/module/Path('module.py')).exists()
         if has_ext:
-            log.info(f"Found extension for '{module}'")
+            log.info(f"Found extension for \"{module}\"")
+            files=mdvalid.discover_extra_files(module)
+            code=mdvalid.get_code(module,files)
+            functions=[]
+            imports=[]
+            for i in code:
+                mods, funcs = mdvalid.get_libs_and_functions(i)
+                functions+=funcs
+                imports+=mods
+            if len(functions)>0:
+                log.warn(f"Module \"{module}\" uses {len(functions)} possibly malicious functions")
+                log.warn("("+", ".join(functions)+")")
+            if len(imports)>0:
+                log.warn(f"Module \"{module}\" uses {len(imports)} external libraries")
+                log.warn("("+", ".join(imports)+")")
