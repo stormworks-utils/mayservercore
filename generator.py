@@ -179,7 +179,10 @@ def generate(path: Path, extract=True, http_port=1000):
     script += callback_defs
 
     if 'httpGet' in functions.keys():
-        http = handlers.generate_handler('httpgen', {'PORT':http_port}, [{'PREFIX':x.split('_')[1], 'NAME':x} for x in functions['httpGet']])
+        http = handlers.generate_handler('httpget', {'PORT':http_port}, [{'PREFIX':x.split('_')[1], 'NAME':x} for x in functions['httpGet']])
+        script += http
+    if 'httpReply' in to_handle.keys():
+        http = handlers.generate_handler('httpreply', {'PORT':http_port}, [{'PREFIX':x.split('_')[1], 'NAME':x} for x in to_handle['httpReply']])
         script += http
     with open('test.lua', 'w') as x:
         x.write(script)
