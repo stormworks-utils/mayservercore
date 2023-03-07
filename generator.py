@@ -9,7 +9,7 @@ import error_handler
 import modules as module_gen
 from pathlib import Path
 import xml.etree.ElementTree as ET
-import httpgen
+import handlers
 
 callback_args = {"onTick": ["game_ticks"], "onCreate": ['is_world_create'], 'onDestroy': [],
                  "onCustomCommand": ['full_message', 'user_peer_id', 'is_admin', 'is_auth', 'command'],
@@ -177,8 +177,9 @@ def generate(path: Path, extract=True, http_port=1000):
     script = ''
     script += compiled_modules
     script += callback_defs
+
     if 'httpGet' in functions.keys():
-        http = httpgen.generate_http_calls(functions['httpGet'], http_port)
+        http = handlers.generate_handler('httpgen', {'PORT':http_port}, [{'PREFIX':x.split('_')[1], 'NAME':x} for x in functions['httpGet']])
         script += http
     with open('test.lua', 'w') as x:
         x.write(script)
