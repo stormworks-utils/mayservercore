@@ -52,7 +52,7 @@ def generate(module,settings, modules):
 
     log.info("Requirements validated")
     # create prefix for private vars/functions to make sure they're not accessible
-    prf = ''.join(random.choices(string.ascii_letters + string.digits, k=10))
+    prf = ''.join(random.choices(string.ascii_letters, k=10))
     prefix = prf+'_'
 
     log.info("Starting stage one parse")
