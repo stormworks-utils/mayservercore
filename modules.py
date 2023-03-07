@@ -1,9 +1,11 @@
 import json
+import string
 
 from logger import Logger
 import error_handler
 from luaparser import ast, astnodes
 import random
+from typing import List
 
 callbacks=['onTick', 'onCreate', 'onDestroy','onCustomCommand', 'onChatMessage', 'onPlayerJoin', 'onPlayerSit', 'onCharacterSit', 'onCharacterUnsit', 'onCharacterPickup', 'onEquipmentPickup', 'onEquipmentDrop', 'onCreaturePickup', 'onPlayerRespawn', 'onPlayerLeave', 'onToggleMap', 'onPlayerDie', 'onVehicleSpawn', 'onVehicleLoad', 'onVehicleUnload', 'onVehicleTeleport', 'onVehicleDespawn', 'onSpawnAddonComponent', 'onVehicleDamaged', 'onFireExtinguished', 'onVehicleUnload', 'onForestFireSpawned', 'onForestFireExtinguised', 'onButtonPress', 'onObjectLoad', 'onObjectUnload', 'onTornado', 'onMeteor', 'onTsunami', 'onWhirlpool', 'onVolcano']
 offhandle=['httpReply','onFirst']
@@ -16,24 +18,24 @@ def generate(module,settings, modules):
     try:
         with open(f"modules/{module}/module.lua", 'r') as module_fs:
             module_full=module_fs.read()
-    except :
+    except:
         error_handler.handleFatal(log,"Unable to fetch module")
     try:
         with open(f"modules/{module}/require.msc", 'r') as require_fs:
-            requires=require_fs.readlines()
-    except :
+            requires: List[str] = require_fs.readlines()
+    except:
         error_handler.handleFatal(log,"Unable to fetch requirements")
 
     for i in requires:
-        inver=False
-        incom=False
-        setting, mod, default=i.split(':')
-        if setting[0]=='!':
-            setting=setting[1:]
-            inver=True
-        if setting[0]=='#':
-            setting=setting[1:]
-            incom=True
+        inver = False
+        incom = False
+        setting, mod, default = i.split(':')
+        if setting.startswith('!'):
+            setting = setting[1:]
+            inver = True
+        if setting.startswith('#'):
+            setting = setting[1:]
+            incom = True
         target_setting = setting.split('.')
         try:
             val = settings
@@ -49,36 +51,28 @@ def generate(module,settings, modules):
                     error_handler.handleFatal(log, f"Module {module} has unmet requirement ({mod})")
 
     log.info("Requirements validated")
-    #create prefix for private vars/functions to make sure theyre not accessible
-    prf=''
-    for i in range(10):
-        ncl=random.randint(1,3)
-        if ncl==1:
-            prf+=str(random.randint(0,9))
-        if ncl==2:
-            prf+=chr(random.randint(65,90))
-        if ncl==3:
-            prf+=chr(random.randint(97,122))
-    prefix=prf+'_'
+    # create prefix for private vars/functions to make sure they're not accessible
+    prf = ''.join(random.choices(string.ascii_letters, k=10))
+    prefix = prf+'_'
 
     log.info("Starting stage one parse")
     #parse MSC flags
-    name='None'
-    desc='None'
-    id=prefix #MODID is used for hidden var prefixes, so if no MODID is given, use prefix to avoid collisions
+    name = 'None'
+    desc = 'None'
+    id = prefix #MODID is used for hidden var prefixes, so if no MODID is given, use prefix to avoid collisions
 
     for i in module_full.split("\n"):
-        if i[:5]=='--###':
-            tagfull=i[5:].split(':',1)
-            tag=tagfull[0]
-            data=tagfull[1]
-            if tag=='NAME':
-                name=data
-            elif tag=='DESC':
-                desc=data
-            elif tag=='MODID':
-                id=data
-                prefix=prefix+id+'_'
+        if i.startswith('--###'):
+            tagfull = i[5:].split(':', 1)
+            tag = tagfull[0]
+            data = tagfull[1]
+            if tag == 'NAME':
+                name = data
+            elif tag == 'DESC':
+                desc = data
+            elif tag == 'MODID':
+                id = data
+                prefix = prefix+id+'_'
     log.info("Starting stage two parse")
 
     vel=ast.parse(module_full)
