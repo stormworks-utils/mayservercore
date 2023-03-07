@@ -132,7 +132,6 @@ def generate(path: Path, extract=True, http_port=1000):
     compiled_modules = ""
     profile_path = make_config(path, extract)
     modules = make_module(profile_path)
-    print(modules)
     to_handle = {}
     callbacks = {}
     functions = {}

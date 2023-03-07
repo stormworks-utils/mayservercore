@@ -5,7 +5,7 @@ import error_handler
 from luaparser import ast, astnodes
 import random
 
-callbacks=['onTick', 'onCreate', 'onDestroy','onCustomCommand', 'onChatMessage', 'onPlayerJoin', 'onPlayerSit', 'onCharacterSit', 'onCharacterUnsit', 'onCharacterPickup', 'onEquipmentPickup', 'onEquipmentDrop', 'onCreaturePickup', 'onPlayerRespawn', 'onPlayerLeave', 'onToggleMap', 'onPlayerDie', 'onVehicleSpawn', 'onVehicleLoad', 'onVehicleUnload', 'onVehicleTeleport', 'onVehicleDespawn', 'onSpawnAddonComponent', 'onVehicleDamaged', 'httpReply', 'onFireExtinguished', 'onVehicleUnload', 'onForestFireSpawned', 'onForestFireExtinguised', 'onButtonPress', 'onObjectLoad', 'onObjectUnload', 'onTornado', 'onMeteor', 'onTsunami', 'onWhirlpool', 'onVolcano']
+callbacks=['onTick', 'onCreate', 'onDestroy','onCustomCommand', 'onChatMessage', 'onPlayerJoin', 'onPlayerSit', 'onCharacterSit', 'onCharacterUnsit', 'onCharacterPickup', 'onEquipmentPickup', 'onEquipmentDrop', 'onCreaturePickup', 'onPlayerRespawn', 'onPlayerLeave', 'onToggleMap', 'onPlayerDie', 'onVehicleSpawn', 'onVehicleLoad', 'onVehicleUnload', 'onVehicleTeleport', 'onVehicleDespawn', 'onSpawnAddonComponent', 'onVehicleDamaged', 'onFireExtinguished', 'onVehicleUnload', 'onForestFireSpawned', 'onForestFireExtinguised', 'onButtonPress', 'onObjectLoad', 'onObjectUnload', 'onTornado', 'onMeteor', 'onTsunami', 'onWhirlpool', 'onVolcano']
 offhandle=['httpReply','onFirst']
 c_function=[('server','httpGet')]
 
@@ -256,14 +256,13 @@ def _recursive_generate(ast_code, prefix, id, settings, callnames, offnames, c_f
                 else:
                     callbacks.update({oname:[name]})
                 ast_code.name.id = name
-            if name in offhandle:
+            if name in offnames:
                 oname=name
                 name='offhandle_'+prefix+name
-                offhandle.append(name)
-                if oname in callbacks.keys():
-                    callbacks[oname].append(name)
+                if oname in offhandle.keys():
+                    offhandle[oname].append(name)
                 else:
-                    callbacks.update({oname:[name]})
+                    offhandle.update({oname:[name]})
                 ast_code.name.id = name
         for i in ast_code.__dict__.values():
             if not type(i)==list:

@@ -26,4 +26,7 @@ end
 function onTick()
 end
 
+function httpReply()
+end
+
 server.httpGet()
