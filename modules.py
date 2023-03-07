@@ -221,7 +221,6 @@ def _recursive_generate(ast_code, prefix, id, settings, callnames, offnames, c_f
                             val=val[j]
                     except:
                         val=x[2]
-                    print(val, type(val))
                     if type(val)==bool or val in ['true', 'false']:
                         if val in ['true', 'false']:
                             val=val=='true'

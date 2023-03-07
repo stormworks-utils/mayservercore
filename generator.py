@@ -10,6 +10,7 @@ import modules as module_gen
 from pathlib import Path
 import xml.etree.ElementTree as ET
 import handlers
+import pymodulevalidator as mdvalid
 
 callback_args = {"onTick": ["game_ticks"], "onCreate": ['is_world_create'], 'onDestroy': [],
                  "onCustomCommand": ['full_message', 'user_peer_id', 'is_admin', 'is_auth', 'command'],
@@ -48,7 +49,7 @@ callback_args = {"onTick": ["game_ticks"], "onCreate": ['is_world_create'], 'onD
 
 
 def make_config(path: Path, extract=True):
-    log = Logger("Configuration file generator")
+    log = Logger("Configuration")
     profile_path: Path = path
     if extract:
         profile_path = Path(path.stem)
@@ -129,12 +130,15 @@ def make_module(path: Path):
 
 def generate(path: Path, extract=True, http_port=1000):
     log = Logger("Addon compiler")
+    log.info("Started module compiler")
     compiled_modules = ""
+    log.info("Processing modules")
     profile_path = make_config(path, extract)
     modules = make_module(profile_path)
     to_handle = {}
     callbacks = {}
     functions = {}
+    log.info("Compiling modules")
     for module in modules:
         code, calls, handles, c_func, name, desc = module
         compiled_modules += f'''--{name}: {desc}
@@ -186,3 +190,20 @@ def generate(path: Path, extract=True, http_port=1000):
         script += http
     with open('test.lua', 'w') as x:
         x.write(script)
+    log.info("Discovering module python files")
+
+    pythons={}
+    with open(profile_path / 'settings.json') as file:
+        try:
+            settings = json.load(file)['settings_msc']['modules']
+        except json.JSONDecodeError:
+            error_handler.handleFatal(log, "Invalid profile.")
+    modules = []
+    for i in settings.keys():
+        if settings[i]['enabled']:
+            modules.append(i)
+    exts={}
+    for module in modules:
+        has_ext=(Path('modules')/module/Path('module.py')).exists()
+        if has_ext:
+            log.info(f"Found extension for '{module}'")
