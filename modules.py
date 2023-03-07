@@ -210,7 +210,7 @@ def _recursive_generate(ast_code, prefix, id, settings, callnames, offnames, c_f
                         functions[oname].append(name)
                     else:
                         functions.update({oname: [name]})
-        for i in ast_code.values:
+        for ind, i in enumerate(ast_code.values):
             if type(i)==astnodes.String:
                 if i.s[:9]=='###CONFIG':
                     x=i.s.split(':')
@@ -221,7 +221,20 @@ def _recursive_generate(ast_code, prefix, id, settings, callnames, offnames, c_f
                             val=val[j]
                     except:
                         val=x[2]
-                    i.s=str(val).lower()
+                    print(val, type(val))
+                    if type(val)==bool or val in ['true', 'false']:
+                        if val in ['true', 'false']:
+                            val=val=='true'
+                        if val:
+                            ast_code.values[ind]=astnodes.TrueExpr()
+                        else:
+                            ast_code.values[ind]=astnodes.FalseExpr()
+                    if type(val) in [int, float] or (type(val)==str and val.replace('.','',1).isdigit()):
+                        if type(val)==str:
+                            val=float(val)
+                        ast_code.values[ind] = astnodes.Number(val)
+                    else:
+                        i.s=str(val)
             else:
                 cb, oh, fc = _recursive_generate(i, prefix, id, settings, callnames, offnames, c_function)
                 for oname in cb.keys():
