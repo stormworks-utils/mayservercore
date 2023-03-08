@@ -104,7 +104,7 @@ def make_config(path: Path, extract=True):
         server_profile.mkdir(parents=True)
     tree: ET.ElementTree = ET.ElementTree(xml_config)
     ET.indent(tree, '    ')
-    tree.write(server_profile / 'server_config.xml', xml_declaration=True, encoding='UTF-8')
+    tree.write(server_profile / Path('conf') / 'server_config.xml', xml_declaration=True, encoding='UTF-8')
     log.info("Config generation complete")
     return profile_path
 

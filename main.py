@@ -1,6 +1,9 @@
 import os
 from pathlib import Path
+import serverutils
 
 import generator
-#generator.generate(Path("test"), extract=False, http_port=1000)
-os.system(r'utils\update_bin.bat msc_test')
+serverutils.makedir('msc_test')
+generator.generate(Path("test"), extract=False, http_port=1000)
+serverutils.update('msc_test')
+serverutils.runserver('msc_test')
