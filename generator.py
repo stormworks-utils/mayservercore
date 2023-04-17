@@ -169,14 +169,12 @@ def generate(path: Path, extract=True, http_port=1000):
                     functions.update({oname: [name]})
     compiled_modules = compiled_modules.strip()
     callback_defs = "\n\n--callback setup\n\n"
+
     for callback in callbacks.keys():
         arguments = callback_args[callback]
-        argument_string = ', '.join(arguments)
         calls = callbacks[callback]
-        callback_defs += f'function {callback}({argument_string})\n'
-        for call in calls:
-            callback_defs += f'    {call}({argument_string})\n'
-        callback_defs += 'end\n\n'
+        callback_defs += handlers.generate_handler('generic_callback',{'CALLBACK_NAME':callback,'PARAMETERS':','.join(arguments)},[{'CALLBACK':name} for name in calls], repl_head=True)
+
     callback_defs = callback_defs
     script = ''
     script += compiled_modules

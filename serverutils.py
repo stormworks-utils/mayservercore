@@ -1,14 +1,15 @@
 import os
 import platform
+import subprocess
 
 def _get_os():
-    return platform.platform()
+    return platform.system()
 
 def update(server):
     if _get_os()=="Windows":
-        os.system(rf'utils\update_bin.bat {server}')
+        subprocess.Popen(rf'utils\update_bin.bat {server}')
     else:
-        os.system(f'./utils/update_bin.sh {server}')
+        subprocess.Popen(f'./utils/update_bin.sh {server}')
 
 def makedir(server):
     if not os.path.exists(f'servers/{server}/'):
@@ -20,6 +21,6 @@ def makedir(server):
 
 def runserver(server):
     if _get_os() == "Windows":
-        os.system(rf'servers\{server}\bin\server64.exe +server_dir \servers\{server}\conf\\')
+        subprocess.Popen(rf'servers\{server}\bin\server64.exe +server_dir \servers\{server}\conf\\')
     else:
-        os.system(rf'./servers/{server}/bin/server64.exe +server_dir /servers/{server}/conf/')
+        subprocess.Popen(rf'./servers/{server}/bin/server64.exe +server_dir /servers/{server}/conf/')
