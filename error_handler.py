@@ -3,6 +3,6 @@ def handleFatal(log,error):
     log.fatal(error)
     sys.exit()
 
-def handleSkippableFatal(log, error):
+def handleSkippable(log, error):
     log.fatal(error)
     sys.exit()

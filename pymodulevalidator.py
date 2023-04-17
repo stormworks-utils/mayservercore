@@ -11,7 +11,12 @@ def get_libs_and_functions(code):
     code_ast=ast.parse(code)
     modules=[]
     functions=[]
+    has_handler=False
     for node in ast.walk(code_ast):
+        if type(node)==ast.FunctionDef:
+            if node.name=='handler':
+                if len(node.args.args)==1:
+                    has_handler=True
         if type(node)==ast.Import:
             names=node.names
             for i in names:
@@ -23,8 +28,8 @@ def get_libs_and_functions(code):
                 func=node.func
 
                 if func.id=='getattr':
-                    if node.args[1].id=='__builtins__':
-                        error_handler.handleSkippableFatal(log, "Module is either incredibly strangely designed or intentionally malicious.")
+                    if len(node.args)>1 and node.args[1].id=='__builtins__':
+                        error_handler.handleSkippable(log, "Module is either incredibly strangely designed or intentionally malicious.")
                 if func.id in marks:
                     functions.append(func.id)
             except AttributeError:
@@ -40,7 +45,7 @@ def get_libs_and_functions(code):
             except AttributeError:
                 pass
 
-    return list(set(modules)), list(set(functions))
+    return list(set(modules)), list(set(functions)), has_handler
 
 def discover_extra_files(module):
     files=[]
