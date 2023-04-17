@@ -20,8 +20,9 @@ def generate(module,settings, modules):
             module_full=module_fs.read()
     except:
         error_handler.handleFatal(log,"Unable to fetch module")
+
     try:
-        with open(f"modules/{module}/require.msc", 'r') as require_fs:
+        with open(f"modules/{module}/require.txt", 'r') as require_fs:
             requires: List[str] = require_fs.readlines()
     except:
         error_handler.handleFatal(log,"Unable to fetch requirements")

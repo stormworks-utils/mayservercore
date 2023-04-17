@@ -21,7 +21,7 @@ def generate(module,settings, modules):
     except:
         error_handler.handleFatal(log,"Unable to fetch module")
     try:
-        with open(f"modules/{module}/require.msc", 'r') as require_fs:
+        with open(f"modules/{module}/require.txt", 'r') as require_fs:
             requires: List[str] = require_fs.readlines()
     except:
         error_handler.handleFatal(log,"Unable to fetch requirements")
@@ -48,7 +48,7 @@ def generate(module,settings, modules):
                 error_handler.handleFatal(log, f"Module {module} is incompatible with another active module ({mod})")
             else:
                 if not mod in modules:
-                    error_handler.handleFatal(log, f"Module {module} has unmet requirement ({mod})")
+                    error_handler.handleFatal(log, f"Module {module} has unmet requirements ({mod})")
 
     log.info("Requirements validated")
     # create prefix for private vars/functions to make sure they're not accessible
