@@ -25,8 +25,8 @@ def generate_handler(
         head_function = replace_placeholders(head_function, static)
     if repl_end:
         end_function = replace_placeholders(end_function, static)
-    string: str = head_function + '\n'
     base_function = replace_placeholders(base_function, static)
+    string: str = head_function + '\n'
     for dyn in dynamic:
         string += replace_placeholders(base_function, dyn) + '\n'
     string += end_function + '\n'
