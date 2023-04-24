@@ -1,10 +1,10 @@
 from pathlib import Path
 def generate_handler(dir, static, dynamic, repl_head=False, repl_end=False):
-    with open(Path(dir) / 'base.lua') as base_h:
+    with open(Path(dir) / 'base') as base_h:
         base_function = base_h.read()
-    with open(Path(dir) / 'head.lua') as head_h:
+    with open(Path(dir) / 'head') as head_h:
         head_function = head_h.read()
-    with open(Path(dir) / 'end.lua') as end_h:
+    with open(Path(dir) / 'end') as end_h:
         end_function = end_h.read()
     string = ''
     if repl_head:
