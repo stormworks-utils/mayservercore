@@ -4,7 +4,7 @@ from typing import Any
 
 def replace_placeholders(base_string: str, replacement_dict: dict[str, Any]) -> str:
     for name, value in replacement_dict.items():
-        base_string.replace(name, str(value))
+        base_string=base_string.replace(name, str(value))
     return base_string
 
 
