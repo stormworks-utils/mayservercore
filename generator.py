@@ -1,5 +1,6 @@
 # MSC server_config and script.lua generator
-
+import os
+import traceback
 import zipfile
 import serverutils
 from logger import Logger
@@ -130,7 +131,7 @@ def make_module(path: Path):
     return generated_modules
 
 
-def generate(path: Path, extract=True, http_port=1000, update=False):
+def generate(path: Path, extract=True, http_port=1000, update=False, write_full_traceback=False):
     log = Logger("Addon compiler")
     try:
         log.info("Started module compiler")
@@ -160,7 +161,7 @@ def generate(path: Path, extract=True, http_port=1000, update=False):
 
         log.info("Compiling modules")
         for module in modules:
-            code, calls, handles, c_func, name, desc = module
+            code, calls, handles, c_func, name, desc, prefix, file_name = module
             compiled_modules += f'''--{name}: {desc}
     
     {code.strip()}
@@ -206,6 +207,8 @@ def generate(path: Path, extract=True, http_port=1000, update=False):
         if 'httpReply' in to_handle.keys():
             http = handlers.generate_handler('httpreply', {'PORT':http_port}, [{'PREFIX':x.split('_')[1], 'NAME':x} for x in to_handle['httpReply']])
             script += http
+        log.info("Clearing existing python extensions")
+        shutil.rmtree(f'{server_path}/py/')
         try:
             serverutils.makedir(server_path)
         except Exception:
@@ -213,24 +216,24 @@ def generate(path: Path, extract=True, http_port=1000, update=False):
         with open(f'{server_path}/bin/rom/data/missions/mscmodules/script.lua', 'w') as x:
             x.write(script)
         log.info("Discovering module python files")
-
         with open(profile_path / 'settings.json') as file:
             try:
                 settings = json.load(file)['settings_msc']['modules']
-            except json.JSONDecodeError:
+            except json.JSO_DecodeError:
                 error_handler.handleFatal(log, "Invalid profile.")
-        modules = []
+        module_names = []
         for i in settings.keys():
             if settings[i]['enabled']:
-                modules.append(i)
-        exts={}
-
+                module_names.append(i)
+        extensions=[]
         for module in modules:
-            has_ext=(Path('modules')/module/Path('module.py')).exists()
+            code, calls, handles, c_func, name, desc, prefix, file_name = module
+            has_ext=(Path('modules')/file_name/Path('module.py')).exists()
             if has_ext:
-                log.info(f"Found extension for \"{module}\"")
-                files=mdvalid.discover_extra_files(module)
-                code=mdvalid.get_code(module,files)
+                extensions.append(prefix)
+                log.info(f"Found extension for \"{file_name}\"")
+                files=mdvalid.discover_extra_files(file_name)
+                code=mdvalid.get_code(file_name,files)
                 functions=[]
                 imports=[]
                 ext_has_handler=False
@@ -240,18 +243,25 @@ def generate(path: Path, extract=True, http_port=1000, update=False):
                     imports+=mods
                     ext_has_handler=ext_has_handler or has_handler
                 if not ext_has_handler:
-                    log.warn(f'Python extension for module "{module}" does not contain an MSC data handler.')
+                    log.warn(f'Python extension for module "{file_name}" does not contain an MSC data handler.')
                 if len(functions)>0:
-                    log.warn(f"Module \"{module}\" uses {len(functions)} possibly malicious functions")
+                    log.warn(f"Module \"{file_name}\" uses {len(functions)} possibly malicious functions")
                     log.warn("("+", ".join(functions)+")")
                 if len(imports)>0:
-                    log.warn(f"Module \"{module}\" uses {len(imports)} external libraries")
+                    log.warn(f"Module \"{file_name}\" uses {len(imports)} external libraries")
                     log.warn("("+", ".join(imports)+")")
-                log.info(f"Installing extension(s) for \"{module}\"")
+                log.info(f"Installing extension(s) for \"{file_name}\"")
                 for file in files:
                     log.info(f"    Copying {file}...")
-                    shutil.copyfile(f'modules/{module}/{file}', f'{server_path}/py/{module}_{file}')
-        f'{server_path}/py/app.py'
+                    if not os.path.exists(f'{server_path}/py/{prefix}'):
+                        os.mkdir(f'{server_path}/py/{prefix}')
+                    shutil.copyfile(f'modules/{file_name}/{file}', f'{server_path}/py/{prefix}/{file}')
+        log.info('Building HTTP server')
+        svr=handlers.generate_handler('flask_handler',{'MODULE_LIST':str(extensions)},[],repl_head=True)
+        with open(f'{server_path}/py/server.py','w') as file:
+            file.write(svr)
         return str(server_path).split('/')
     except Exception as exc:
+        if write_full_traceback:
+            traceback.print_exc()
         error_handler.handleFatal(log, f"Unhandled generator failure ({exc}).")

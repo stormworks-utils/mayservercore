@@ -82,7 +82,7 @@ def generate(module,settings, modules):
     log.info(f"Processing complete, found {len(calls)} callbacks, {len(functions)} special function calls, and {len(handles)} handlers.")
     code=ast.to_lua_source(vel)
     log.info("Module code generated")
-    return code, calls, handles, functions, name, desc
+    return code, calls, handles, functions, name, desc, prf, module
 
 def _recursive_generate(ast_code, prefix, id, settings, callnames, offnames, c_function):
     callbacks= {}
