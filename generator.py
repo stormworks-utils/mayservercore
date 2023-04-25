@@ -252,7 +252,7 @@ def generate(path: Path, extract=True, http_port=1000, update=False, write_full_
                     log.warn("("+", ".join(imports)+")")
                 log.info(f"Installing extension(s) for \"{file_name}\"")
                 for file in files:
-                    log.info(f"    Copying {file}...")
+                    log.info(f"Copying {file}")
                     if not os.path.exists(f'{server_path}/py/{prefix}'):
                         os.mkdir(f'{server_path}/py/{prefix}')
                     shutil.copyfile(f'modules/{file_name}/{file}', f'{server_path}/py/{prefix}/{file}')
