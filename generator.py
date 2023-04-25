@@ -135,11 +135,6 @@ def generate(path: Path, extract=True, http_port=1000, update=False, write_full_
     log = Logger("Addon compiler")
     try:
         log.info("Started module compiler")
-        first_run=localinfo.first_run()
-        if first_run and not update:
-            log.warn("First startup detected, overriding update flag")
-            update=True
-            localinfo.disable_first_run()
         compiled_modules = ""
         final=False
         for i in make_config(path, extract):
@@ -147,6 +142,9 @@ def generate(path: Path, extract=True, http_port=1000, update=False, write_full_
                 profile_path=i
             else:
                 server_path=i
+                if not (os.path.exists(f'/servers/{server_path}/bin/server.exe') and update):
+                    log.warn("Server not found, forcing update")
+                    update = True
                 try:
                     serverutils.makedir(server_path)
                 except Exception:
