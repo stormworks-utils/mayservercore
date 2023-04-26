@@ -1,6 +1,7 @@
 import os
 import platform
 import subprocess
+from pathlib import Path
 
 def _get_os():
     return platform.system()
@@ -11,17 +12,12 @@ def update(server):
     else:
         os.system(f'./utils/update_bin.sh {server}')
 
-def makedir(server):
-    if not os.path.exists(f'{server}/'):
-        os.mkdir(f'{server}/')
-    if not os.path.exists(f'{server}/bin'):
-        os.mkdir(f'{server}/bin')
-    if not os.path.exists(f'{server}/py'):
-        os.mkdir(f'{server}/py')
-    if not os.path.exists(f'{server}/conf'):
-        os.mkdir(f'{server}/conf')
-    if not os.path.exists(f'{server}/bin/rom/data/missions/mscmodules/'):
-        os.mkdir(f'{server}/bin/rom/data/missions/mscmodules/')
+
+def makedir(server: Path):
+    server.mkdir(parents=True, exist_ok=True)
+    (server / 'bin').mkdir(exist_ok=True)
+    (server / 'py').mkdir(exist_ok=True)
+    (server / 'bin' / 'rom' / 'data' / 'missions' / 'mscmodules').mkdir(parents=True, exist_ok=True)
 
 def runserver(server):
     if _get_os() == "Windows":
