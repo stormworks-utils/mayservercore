@@ -50,7 +50,7 @@ callback_args = {"onTick": ["game_ticks"], "onCreate": ['is_world_create'], 'onD
                  'onVolcano': ['transform']}
 
 
-def make_config(path: Path, extract=True):
+def make_config(path: Path, extract=True) -> tuple[Path, Path]:
     log = Logger("Configuration")
     profile_path: Path = path
     if extract:
@@ -106,10 +106,10 @@ def make_config(path: Path, extract=True):
         server_profile.mkdir(parents=True)
     tree: ET.ElementTree = ET.ElementTree(xml_config)
     ET.indent(tree, '    ')
-    yield server_profile
-    tree.write(server_profile / Path('conf') / 'server_config.xml', xml_declaration=True, encoding='UTF-8')
+    (server_profile / 'conf').mkdir(parents=True, exist_ok=True)
+    tree.write(server_profile / 'conf' / 'server_config.xml', xml_declaration=True, encoding='UTF-8')
     log.info("Config generation complete")
-    yield profile_path
+    return server_profile, profile_path
 
 
 def make_module(path: Path):
@@ -136,22 +136,16 @@ def generate(path: Path, extract=True, http_port=1000, update=False, write_full_
     try:
         log.info("Started module compiler")
         compiled_modules = ""
-        final=False
-        for i in make_config(path, extract):
-            if final:
-                profile_path=i
-            else:
-                server_path=i
-                if not (os.path.exists(f'/servers/{server_path}/bin/server.exe') and update):
-                    log.warn("Server not found, forcing update")
-                    update = True
-                try:
-                    serverutils.makedir(server_path)
-                except Exception:
-                    log.warn("Unable to complete directory creation")
-                if update:
-                    serverutils.update(server_path)
-                final = True
+        server_path, profile_path = make_config(path, extract)
+        if not ((server_path / 'bin' / 'server.exe').is_dir() and update):
+            log.warn("Server not found, forcing update")
+            update = True
+        try:
+            serverutils.makedir(server_path)
+        except Exception:
+            log.warn("Unable to complete directory creation")
+        if update:
+            serverutils.update(server_path)
         modules = make_module(profile_path)
         to_handle = {}
         callbacks = {}
