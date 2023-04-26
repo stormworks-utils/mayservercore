@@ -102,11 +102,9 @@ def make_config(path: Path, extract=True) -> tuple[Path, Path]:
 
     log.info("server_config.xml generated")
     server_profile: Path = Path('servers') / settings['properties']['server_shorthand']
-    if not server_profile.exists():
-        server_profile.mkdir(parents=True)
+    serverutils.makedir(server_profile)
     tree: ET.ElementTree = ET.ElementTree(xml_config)
     ET.indent(tree, '    ')
-    (server_profile / 'conf').mkdir(parents=True, exist_ok=True)
     tree.write(server_profile / 'conf' / 'server_config.xml', xml_declaration=True, encoding='UTF-8')
     log.info("Config generation complete")
     return server_profile, profile_path
@@ -140,10 +138,6 @@ def generate(path: Path, extract=True, http_port=1000, update=False, write_full_
         if not ((server_path / 'bin' / 'server.exe').is_dir() and update):
             log.warn("Server not found, forcing update")
             update = True
-        try:
-            serverutils.makedir(server_path)
-        except Exception:
-            log.warn("Unable to complete directory creation")
         if update:
             serverutils.update(server_path)
         modules = make_module(profile_path)

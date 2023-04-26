@@ -17,6 +17,7 @@ def makedir(server: Path):
     server.mkdir(parents=True, exist_ok=True)
     (server / 'bin').mkdir(exist_ok=True)
     (server / 'py').mkdir(exist_ok=True)
+    (server / 'conf').mkdir(exist_ok=True)
     (server / 'bin' / 'rom' / 'data' / 'missions' / 'mscmodules').mkdir(parents=True, exist_ok=True)
 
 def runserver(server):
