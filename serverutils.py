@@ -11,7 +11,7 @@ def _get_os():
 def update(server: Path):
     server = server.absolute() / 'bin'
     if _get_os() == "Windows":
-        os.system(rf"utils\update_bin.bat '{server}'")
+        os.system(rf'utils\update_bin.bat "{server}"')
     else:
         os.system(f"./utils/update_bin.sh '{server}'")
 
