@@ -3,14 +3,17 @@ import platform
 import subprocess
 from pathlib import Path
 
+
 def _get_os():
     return platform.system()
 
-def update(server):
-    if _get_os()=="Windows":
-        os.system(rf'utils\update_bin.bat {server}')
+
+def update(server: Path):
+    server = server.absolute() / 'bin'
+    if _get_os() == "Windows":
+        os.system(rf"utils\update_bin.bat '{server}'")
     else:
-        os.system(f'./utils/update_bin.sh {server}')
+        os.system(f"./utils/update_bin.sh '{server}'")
 
 
 def makedir(server: Path):
