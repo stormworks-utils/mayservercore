@@ -241,7 +241,7 @@ def generate(path: Path, extract=True, http_port=1000, update=False, write_full_
                     imports+=mods
                     ext_has_handler=ext_has_handler or has_handler
                 if not ext_has_handler:
-                    log.warn(f'Python extension for module "{file_name}" does not contain an MSC data handler.')
+                    log.warn(f'Python extension for module "{file_name}" does not contain a handler function.')
                 if len(functions)>0:
                     log.warn(f"Module \"{file_name}\" uses {len(functions)} possibly malicious functions")
                     log.warn("("+", ".join(functions)+")")
@@ -258,6 +258,7 @@ def generate(path: Path, extract=True, http_port=1000, update=False, write_full_
         svr=handlers.generate_handler('flask_handler',{'MODULE_LIST':str(extensions)},[],repl_head=True)
         with open(f'{server_path}/py/server.py','w') as file:
             file.write(svr)
+        log.info('Server generation complete')
         return str(server_path).split('/')
     except Exception as exc:
         if write_full_traceback:
