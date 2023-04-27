@@ -135,10 +135,9 @@ def generate(path: Path, extract=True, http_port=1000, update=False, write_full_
         log.info("Started module compiler")
         compiled_modules = ""
         server_path, profile_path = make_config(path, extract)
-        if not ((server_path / 'bin' / 'server.exe').is_dir() and update):
-            log.warn("Server not found, forcing update")
-            update = True
-        if update:
+        if not (server_path / 'bin' / 'server.exe').exists() or update:
+            if not update:
+                log.warn("Server not found, forcing update")
             serverutils.update(server_path)
         modules = make_module(profile_path)
         to_handle = {}
