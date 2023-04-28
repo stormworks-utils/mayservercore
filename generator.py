@@ -91,6 +91,7 @@ def make_config(path: Path, extract=True) -> tuple[Path, Path]:
     ET.SubElement(xml_config, 'blacklist')
     ET.SubElement(xml_config, 'whitelist')
     playlists_config: ET.SubElement = ET.SubElement(xml_config, 'playlists')
+    ET.SubElement(playlists_config, 'path', attrib={'path': 'rom/data/missions/mscmodules'})
     for k, v in settings["default_addons"].items():
         if v:
             if "dlc" in k:
@@ -109,6 +110,23 @@ def make_config(path: Path, extract=True) -> tuple[Path, Path]:
     log.info("Config generation complete")
     return server_profile, profile_path
 
+def load_extras(profile: Path,log: Logger):
+    log.info('Loading extra addons')
+    with open(profile / 'settings.json') as file:
+        try:
+            settings = json.load(file)
+        except json.JSONDecodeError:
+            error_handler.handleFatal(log, "Invalid profile.")
+    path=Path('servers')/settings['properties']['server_shorthand']
+    addons=settings['extra_addons']
+    for i in addons:
+        log.info(f'Copying {i}')
+        if (profile/i).exists():
+            if (path/'bin'/'rom'/'data'/'missions'/i).exists():
+                shutil.rmtree(path/'bin'/'rom'/'data'/'missions'/i)
+            shutil.copytree(profile/i,path/'bin'/'rom'/'data'/'missions'/i)
+        else:
+            error_handler.handleSkippable(log,f'Addon "{i}" cannot be found')
 
 def make_module(path: Path):
     log = Logger("Module generator")
@@ -135,7 +153,7 @@ def generate(path: Path, extract=True, http_port=1000, update=False, write_full_
         log.info("Started module compiler")
         compiled_modules = ""
         server_path, profile_path = make_config(path, extract)
-        if not (server_path / 'bin' / 'server.exe').exists() or update:
+        if update or not (server_path / 'bin' / 'server.exe').exists():
             if not update:
                 log.warn("Server not found, forcing update")
             serverutils.update(server_path)
@@ -192,6 +210,7 @@ def generate(path: Path, extract=True, http_port=1000, update=False, write_full_
         if 'httpReply' in to_handle.keys():
             http = handlers.generate_handler('httpreply', {'PORT':http_port}, [{'PREFIX':x.split('_')[1], 'NAME':x} for x in to_handle['httpReply']])
             script += http
+        load_extras(profile_path,log)
         log.info("Clearing existing python extensions")
         shutil.rmtree(f'{server_path}/py/')
         try:
