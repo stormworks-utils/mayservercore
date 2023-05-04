@@ -38,6 +38,6 @@ def makedir(server: Path):
 
 def runserver(server):
     if _get_os() == "Windows":
-        subprocess.Popen(rf'servers\{server}\bin\server64.exe +server_dir \{server}\conf\\')
+        subprocess.Popen(rf'{server}\bin\server64.exe +server_dir {server}\conf\\')
     else:
-        subprocess.Popen(rf'./servers/{server}/bin/server64.exe +server_dir ./{server}/conf/')
+        subprocess.Popen(rf'./{server}/bin/server64.exe +server_dir ./{server}/conf/')
