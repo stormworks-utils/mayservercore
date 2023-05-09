@@ -123,7 +123,6 @@ def generate(module: str, settings: SettingsDict, modules):
     log.info("Starting stage two parse")
 
     chunk = parse(module_full)
-    chunk.parent(None)
     log.info("AST generated")
 
     generator: Generate = Generate(prefix, module_id, settings)
