@@ -148,7 +148,7 @@ def generate(module: str, settings: SettingsDict, modules):
     )
 
 
-class Generate(basic_walker.BasicWalker[None]):
+class Generate(basic_walker.NoneWalker):
     def __init__(self, prefix: str, module_id: str, settings: SettingsDict):
         self.prefix: str = prefix
         self.module_id: str = module_id
@@ -178,29 +178,6 @@ class Generate(basic_walker.BasicWalker[None]):
                 pass
         return value
 
-    def visit_Assign(self, node: basic_walker.Assign) -> None:
-        for name in node.targets:
-            self.visit(name)
-        if node.expressions:
-            for expr in node.expressions:
-                self.visit(expr)
-
-    def visit_Block(self, node: basic_walker.Block) -> None:
-        for statement in node.statements:
-            self.visit(statement)
-        if node.returns:
-            for retexpr in node.returns:
-                self.visit(retexpr)
-
-    def visit_Boolean(self, node: basic_walker.Boolean) -> None:
-        ...
-
-    def visit_Break(self, node: basic_walker.Break) -> None:
-        ...
-
-    def visit_Goto(self, node: basic_walker.Goto) -> None:
-        self.visit(node.label_name)
-
     def visit_Name(self, node: basic_walker.Name) -> None:
         if node.variable_name.startswith("__"):
             # private var
@@ -208,12 +185,6 @@ class Generate(basic_walker.BasicWalker[None]):
         elif node.variable_name.startswith("_"):
             # protected var
             node.variable_name = self.module_id + node.variable_name
-
-    def visit_Nil(self, node: basic_walker.Nil) -> None:
-        ...
-
-    def visit_Number(self, node: basic_walker.Number) -> None:
-        ...
 
     def visit_String(self, node: basic_walker.String) -> None:
         if node.value.startswith("###CONFIG"):
@@ -230,25 +201,6 @@ class Generate(basic_walker.BasicWalker[None]):
                 ...
             else:
                 node.value = str(setting)
-
-    def visit_Table(self, node: basic_walker.Table) -> None:
-        for field in node.fields:
-            self.visit(field)
-
-    def visit_Vararg(self, node: basic_walker.Vararg) -> None:
-        ...
-
-    def visit_Label(self, node: basic_walker.Label) -> None:
-        self.visit(node.label_name)
-
-    def visit_LocalAssign(self, node: basic_walker.LocalAssign) -> None:
-        for name in node.variable_names:
-            self.visit(name.name)
-        for expr in node.expressions:
-            self.visit(expr)
-
-    def visit_Semicolon(self, node: basic_walker.Semicolon) -> None:
-        ...
 
     def visit_FunctionDefinition(self, node: basic_walker.FunctionDefinition) -> None:
         if len(node.names) == 1:
