@@ -224,3 +224,4 @@ class Generate(basic_walker.NoneWalker):
                     node.variable_name.variable_name = "mschttp"
                     node.lhs.variable_name = new_name
                     self.functions[index].append(new_name)
+        super().visit_NamedIndex(node)
