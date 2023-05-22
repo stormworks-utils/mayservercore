@@ -78,13 +78,15 @@ def generate(module: str, settings: SettingsDict, modules):
         if setting.startswith("#"):
             setting = setting[1:]
             incompatible = True
-        target_setting: list[str] = setting.split(".")
+        #TODO: better requirement parsing
+        setting: list[str] = setting.split(".")
         try:
             val: str = settings
-            for j in target_setting:
+            for j in setting:
                 val = val[j]
         except:
             val = default
+        return val
         if (val and not invert) or (invert and not val):
             if incompatible:
                 error_handler.handleFatal(
@@ -147,6 +149,15 @@ def generate(module: str, settings: SettingsDict, modules):
         module,
     )
 
+def fetchSetting(settings,default,setting):
+    setting: list[str] = setting.split(".")
+    try:
+        val: str = settings
+        for j in setting:
+            val = val[j]
+    except:
+        val = default
+    return val
 
 class Generate(basic_walker.NoneWalker):
     def __init__(self, prefix: str, module_id: str, settings: SettingsDict):
