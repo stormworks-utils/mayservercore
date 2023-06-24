@@ -1,3 +1,3 @@
---###NAME:Players
---###DESC:Basic system for tracking players and various per-player information
---###MODID:players
+function blank(a)
+    return a
+end
