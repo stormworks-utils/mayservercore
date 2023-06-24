@@ -113,37 +113,6 @@ def generate(module: str, settings: SettingsDict, modules):
                 f"Module {module} is incompatible with another active module ({mod})",
             )
 
-    '''for i in requires:
-        invert: bool = False
-        incompatible: bool = False
-        setting, mod, default = i.split(":")
-        if setting.startswith("!"):
-            setting = setting[1:]
-            invert = True
-        if setting.startswith("#"):
-            setting = setting[1:]
-            incompatible = True
-        #TODO: better requirement parsing
-        setting: list[str] = setting.split(".")
-        try:
-            val: str = settings
-            for j in setting:
-                val = val[j]
-        except:
-            val = default
-        return val
-        if (val and not invert) or (invert and not val):
-            if incompatible:
-                error_handler.handleFatal(
-                    log,
-                    f"Module {module} is incompatible with another active module ({mod})",
-                )
-            else:
-                if not mod in modules:
-                    error_handler.handleFatal(
-                        log, f"Module {module} has unmet requirements ({mod})"
-                    )'''
-
     log.info("Requirements validated")
     # create prefix for private vars/functions to make sure they're not accessible
     prf: str = "".join(random.choices(string.ascii_letters, k=10))
