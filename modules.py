@@ -69,44 +69,17 @@ def generate(module: str, settings: SettingsDict, modules):
             module_data: dict[str] = json.load(module_meta)
     except:
         error_handler.handleFatal(log, "Unable to fetch module data")
-    dependencies=module_data['dependencies']
-    incompatibles=module_data['incompatibles']
+    dependencies = module_data.get("dependencies") or []
+    incompatibles = module_data.get("incompatibles") or []
     for i in dependencies:
-        setting, mod, default = i.split(":")
-        print(f'{setting},{mod},{default}')
-        invert=False
-        if setting.startswith("!"):
-            setting = setting[1:]
-            invert = True 
-        setting: list[str] = setting.split(".")
-        try:
-            val: str = settings
-            for j in setting:
-                val = val[j]
-        except:
-            val = default
-        if invert:
-            val=not val
+        val, mod = parse_dependency(i, settings)
         if val and (mod not in modules):
             error_handler.handleFatal(
                 log,
                 f"Module {module} has unmet dependencies ({mod})",
             )
     for i in incompatibles:
-        setting, mod, default = i.split(":")
-        invert=False
-        if setting.startswith("!"):
-            setting = setting[1:]
-            invert = True
-        setting: list[str] = setting.split(".")
-        try:
-            val: str = settings
-            for j in setting:
-                val = val[j]
-        except:
-            val = default
-        if invert:
-            val = not val
+        val, mod = parse_dependency(i, settings)
         if val and (mod in modules):
             error_handler.handleFatal(
                 log,
@@ -118,9 +91,9 @@ def generate(module: str, settings: SettingsDict, modules):
     prf: str = "".join(random.choices(string.ascii_letters, k=10))
     prefix: str = prf + "_"
 
-    module_id=module_data['id']
-    desc=module_data['description']
-    name=module_data['name']
+    module_id = module_data["id"]
+    desc = module_data["description"]
+    name = module_data["name"]
     log.info("Starting stage two parse")
 
     chunk = parse(module_full)
@@ -147,15 +120,44 @@ def generate(module: str, settings: SettingsDict, modules):
         module,
     )
 
-def fetchSetting(settings,default,setting):
-    setting: list[str] = setting.split(".")
+
+def parse_dependency(dependency: str, settings: SettingsDict) -> tuple[bool, str]:
+    setting, mod, default = dependency.split(":")
+    print(f"{setting},{mod},{default}")
+    invert = False
+    if setting.startswith("!"):
+        setting = setting[1:]
+        invert = True
+    val: bool = bool(fetch_setting(settings, default, setting))
+    if invert:
+        val = not val
+    return val, mod
+
+
+def fetch_setting(
+    settings: SettingsDict, default: str, name: str
+) -> bool | int | float | str:
+    name_parts: list[str] = name.split(".")
     try:
-        val: str = settings
-        for j in setting:
-            val = val[j]
-    except:
-        val = default
-    return val
+        setting: SettingsDict | bool | int | float | str = settings
+        for i in name_parts:
+            assert isinstance(setting, dict), "Invalid setting"
+            setting = setting[i]
+        value = setting
+        assert isinstance(value, (str, int, float, bool)), "Invalid setting"
+    except IndexError:
+        value = default
+    except AssertionError:
+        value = default
+    if isinstance(value, str):
+        if value.lower() in ("true", "false"):
+            value = value.lower() == "true"
+        try:
+            value = float(value)
+        except ValueError:
+            pass
+    return value
+
 
 class Generate(basic_walker.NoneWalker):
     def __init__(self, prefix: str, module_id: str, settings: SettingsDict):
@@ -167,25 +169,7 @@ class Generate(basic_walker.NoneWalker):
         self.functions: dict[str, list[str]] = {name: [] for _, name in c_function}
 
     def _get_setting(self, name: str, default: str) -> bool | int | float | str:
-        name_parts: list[str] = name.split(".")
-        try:
-            setting: SettingsDict | bool | int | float | str = self.settings
-            for i in name_parts:
-                setting = setting[i]
-            value = setting
-            assert isinstance(value, (str, int, float, bool)), "Invalid setting"
-        except IndexError:
-            value = default
-        except AssertionError:
-            value = default
-        if isinstance(value, str):
-            if value.lower() in ("true", "false"):
-                value = value.lower() == "true"
-            try:
-                value = float(value)
-            except ValueError:
-                pass
-        return value
+        return fetch_setting(self.settings, default, name)
 
     def visit_Name(self, node: basic_walker.Name) -> None:
         if node.variable_name.startswith("__"):
