@@ -1,4 +1,6 @@
 from __future__ import annotations
+
+import json
 import string
 
 from logger import Logger
@@ -63,12 +65,55 @@ def generate(module: str, settings: SettingsDict, modules):
     except:
         error_handler.handleFatal(log, "Unable to fetch module")
     try:
-        with (module_path / "require.txt").open() as require_fs:
-            requires: list[str] = require_fs.readlines()
+        with (module_path / "meta.json").open() as module_meta:
+            module_data: dict[str] = json.load(module_meta)
     except:
-        error_handler.handleFatal(log, "Unable to fetch requirements")
+        error_handler.handleFatal(log, "Unable to fetch module data")
+    dependencies=module_data['dependencies']
+    incompatibles=module_data['incompatibles']
+    for i in dependencies:
+        setting, mod, default = i.split(":")
+        print(f'{setting},{mod},{default}')
+        invert=False
+        if setting.startswith("!"):
+            setting = setting[1:]
+            invert = True 
+        setting: list[str] = setting.split(".")
+        try:
+            val: str = settings
+            for j in setting:
+                val = val[j]
+        except:
+            val = default
+        if invert:
+            val=not val
+        if val and (mod not in modules):
+            error_handler.handleFatal(
+                log,
+                f"Module {module} has unmet dependencies ({mod})",
+            )
+    for i in incompatibles:
+        setting, mod, default = i.split(":")
+        invert=False
+        if setting.startswith("!"):
+            setting = setting[1:]
+            invert = True
+        setting: list[str] = setting.split(".")
+        try:
+            val: str = settings
+            for j in setting:
+                val = val[j]
+        except:
+            val = default
+        if invert:
+            val = not val
+        if val and (mod in modules):
+            error_handler.handleFatal(
+                log,
+                f"Module {module} is incompatible with another active module ({mod})",
+            )
 
-    for i in requires:
+    '''for i in requires:
         invert: bool = False
         incompatible: bool = False
         setting, mod, default = i.split(":")
@@ -97,31 +142,16 @@ def generate(module: str, settings: SettingsDict, modules):
                 if not mod in modules:
                     error_handler.handleFatal(
                         log, f"Module {module} has unmet requirements ({mod})"
-                    )
+                    )'''
 
     log.info("Requirements validated")
     # create prefix for private vars/functions to make sure they're not accessible
     prf: str = "".join(random.choices(string.ascii_letters, k=10))
     prefix: str = prf + "_"
 
-    log.info("Starting stage one parse")
-    # parse MSC flags
-    name: str = "None"
-    desc: str = "None"
-    module_id: str = prefix  # MODID is used for hidden var prefixes, so if no MODID is given, use prefix to avoid collisions
-
-    for i in module_full.split("\n"):
-        if i.startswith("--###"):
-            tagfull = i[5:].split(":", 1)
-            tag = tagfull[0]
-            data = tagfull[1]
-            if tag == "NAME":
-                name = data
-            elif tag == "DESC":
-                desc = data
-            elif tag == "MODID":
-                module_id = data
-                prefix = prefix + module_id + "_"
+    module_id=module_data['id']
+    desc=module_data['description']
+    name=module_data['name']
     log.info("Starting stage two parse")
 
     chunk = parse(module_full)
@@ -129,11 +159,10 @@ def generate(module: str, settings: SettingsDict, modules):
 
     generator: Generate = Generate(prefix, module_id, settings)
     generator.visit(chunk)
-
     log.info(
-        f"Processing complete, found {len(generator.callbacks)} callbacks, "
-        f"{len(generator.functions)} special function calls, "
-        f"and {len(generator.offhandles)} handlers."
+        f"Processing complete, found {len([i for i in generator.callbacks.values() if i!=[]])} callbacks, "
+        f"{len([i for i in generator.functions.values() if i!=[]])} special function calls, "
+        f"and {len([i for i in generator.offhandles.values() if i!=[]])} handlers."
     )
 
     code = format(chunk)
