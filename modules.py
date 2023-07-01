@@ -212,7 +212,7 @@ class Generate(basic_walker.NoneWalker):
         if isinstance(node.lhs, basic_walker.Name):
             index, value = str(node.lhs), str(node.variable_name)
             for a, b in c_function:
-                if index == b and value == a:
+                if index == a and value == b:
                     new_name: str = f"mscfunction_{self.prefix}{index}"
                     node.variable_name.variable_name = "mschttp"
                     node.lhs.variable_name = new_name
