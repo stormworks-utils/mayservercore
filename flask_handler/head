@@ -1,15 +1,17 @@
 from flask import Flask
 from flask import request
+import json
 
 app=Flask()
 
 smodlist=MODULE_LIST
-modlist={i:__import__(f'{i}/module.py') for i in smodlist}
+modlist={i:__import__(f'{i}/module') for i in smodlist}
 
 @app.route('/mschttp')
 def mschttp_reciever():
-    print('rec')
     data = request.args
-    data = data.to_dict()['data']
+    data = json.loads(data.to_dict()['data'])
     response=modlist[data['module']].handler(data['type'],data['data'])
     return response
+
+app.run(port=PORT)
