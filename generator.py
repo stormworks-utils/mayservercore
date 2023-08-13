@@ -165,11 +165,13 @@ def generate(path: Path, extract=True, http_port=1000, update=False, write_full_
         modulealias_reverse=module_gen.discover_modules(log)
         modulealias={modulealias_reverse[i]:i for i in modulealias_reverse.keys()}
         log.info("Compiling modules")
+        moduleprefixes={}
         for module in modules:
             code, calls, handles, c_func, name, desc, prefix, file_name = module
+            moduleprefixes.update({prefix:name})
             if name == '':
                 continue
-            compiled_modules += f'''--{modulealias[name]}: {desc}
+            compiled_modules += f'''--{name}: {desc}
     
     {code.strip()}
     
@@ -207,12 +209,11 @@ def generate(path: Path, extract=True, http_port=1000, update=False, write_full_
         script = ''
         script += compiled_modules
         script += callback_defs
-
         if 'httpGet' in functions.keys():
-            http = handlers.generate_handler('httpget', {'PORT':http_port}, [{'PREFIX':x.split('_')[1], 'NAME':modulealias[name], 'PREFIXED':x} for x in functions['httpGet']])
+            http = handlers.generate_handler('httpget', {'PORT':http_port}, [{'PREFIX':x.split('_')[1], 'NAME':moduleprefixes[x.split('_')[1]], 'PREFIXED':x} for x in functions['httpGet']])
             script += http
         if 'httpReply' in to_handle.keys():
-            http = handlers.generate_handler('httpreply', {'PORT':http_port}, [{'PREFIX':x.split('_')[1], 'NAME':modulealias[name], 'PREFIXED':x} for x in to_handle['httpReply']])
+            http = handlers.generate_handler('httpreply', {'PORT':http_port}, [{'PREFIX':x.split('_')[1], 'NAME':moduleprefixes[x.split('_')[1]], 'PREFIXED':x} for x in to_handle['httpReply']])
             script += http
         load_extras(profile_path,log)
         log.info("Clearing existing python extensions")
@@ -234,13 +235,13 @@ def generate(path: Path, extract=True, http_port=1000, update=False, write_full_
             if settings[i]['enabled']:
                 module_names.append(i)
         extensions=[]
-
+        extended_modules=[]
         for module in modules:
             code, calls, handles, c_func, name, desc, prefix, file_name = module
-            has_ext=(Path('modules')/file_name/Path('module.py')).exists()
+            has_ext=(file_name/Path('module.py')).exists()
             if has_ext:
                 extensions.append(prefix)
-                log.info(f"Found extension for \"{file_name}\"")
+                log.info(f"Found extension for \"{name}\"")
                 files=mdvalid.discover_extra_files(file_name)
                 code=mdvalid.get_code(file_name,files)
                 functions=[]
@@ -252,22 +253,21 @@ def generate(path: Path, extract=True, http_port=1000, update=False, write_full_
                     imports+=mods
                     ext_has_handler=ext_has_handler or has_handler
                 if not ext_has_handler:
-                    log.warn(f'Python extension for module "{file_name}" does not contain a valid handler function.')
+                    log.warn(f'Python extension for module "{name}" does not contain a valid handler function.')
+                else:
+                    extended_modules.append(name)
                 if len(functions)>0:
-                    log.warn(f"Module \"{file_name}\" uses {len(functions)} possibly malicious functions")
+                    log.warn(f"Module \"{name}\" uses {len(functions)} possibly malicious functions")
                     log.warn("("+", ".join(functions)+")")
                 if len(imports)>0:
-                    log.warn(f"Module \"{file_name}\" uses {len(imports)} external libraries")
+                    log.warn(f"Module \"{name}\" uses {len(imports)} external libraries")
                     log.warn("("+", ".join(imports)+")")
-                log.info(f"Installing extension(s) for \"{file_name}\"")
-                os.mkdir(f'{server_path}/py/{file_name}')
+                log.info(f"Installing extension(s) for \"{name}\"")
                 for file in files:
                     log.info(f"Copying {file}")
-                    #do public/hidden/private prefixes
-                    shutil.copyfile(f'modules/{file_name}/{file}', f'{server_path}/py/{file_name}/{file}')
+                    shutil.copyfile(f'{file_name}/{file}', f'{server_path}/py/{name}_{file}')
         log.info('Building HTTP server')
-        print(server_path)
-        svr=handlers.generate_handler('flask_handler',{'MODULE_LIST':str(module_names), 'PORT':http_port},[],repl_head=True)
+        svr=handlers.generate_handler('flask_handler',{'MODULE_LIST':str(extended_modules), 'PORT':http_port},[],repl_head=True)
         with open(f'{server_path}/py/server.py','w') as file:
             file.write(svr)
         log.info('Server generation complete')

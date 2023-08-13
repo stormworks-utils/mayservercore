@@ -1,6 +1,5 @@
 {
   "id": "players",
-  "name": "Players",
   "description": "Low level player tracking",
   "dependencies": [],
   "incompatibles": []

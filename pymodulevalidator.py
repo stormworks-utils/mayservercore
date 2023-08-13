@@ -14,7 +14,6 @@ def get_libs_and_functions(code):
     has_handler=False
     for node in ast.walk(code_ast):
         if type(node)==ast.FunctionDef:
-            print(node.__dict__)
             if node.name=='handler':
                 if len(node.args.args)==2:
                     has_handler=True
@@ -45,19 +44,18 @@ def get_libs_and_functions(code):
                     functions.append(node.attr)
             except AttributeError:
                 pass
-    print(has_handler)
     return list(set(modules)), list(set(functions)), has_handler
 
 def discover_extra_files(module):
     files=[]
-    for i in os.walk(Path('modules')/module):
+    for i in os.walk(module):
         files=i[2]
     files=[file for file in files if file.split(".")[1]=='py']
     return files 
 
 def get_code(module, files):
     code=[]
-    modpath=Path("modules")/module
+    modpath=module
     for i in files:
         with open(modpath/i,'r') as file:
             code.append(file.read())

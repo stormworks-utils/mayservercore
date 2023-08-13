@@ -75,7 +75,11 @@ def generate(module_name: str, module_path: str, settings: SettingsDict, modules
     dependencies=module_data['dependencies']
     incompatibles=module_data['incompatibles']
     for i in dependencies:
-        setting, mod, default = i.split(":")
+        try:
+            setting, mod, default = i.split(":")
+        except:
+            error_handler.handleFatal(log,f'Invalid dependency string \'{i}\' for module {module_name}')
+            continue
         invert=False
         if setting.startswith("!"):
             setting = setting[1:]
@@ -95,7 +99,11 @@ def generate(module_name: str, module_path: str, settings: SettingsDict, modules
                 f"Module {module_name} has unmet dependencies ({mod})",
             )
     for i in incompatibles:
-        setting, mod, default = i.split(":")
+        try:
+            setting, mod, default = i.split(":")
+        except:
+            error_handler.handleFatal(log,f'Invalid incompatibility string \'{i}\' for module {module_name}')
+            continue
         invert=False
         if setting.startswith("!"):
             setting = setting[1:]
@@ -122,7 +130,6 @@ def generate(module_name: str, module_path: str, settings: SettingsDict, modules
 
     module_id=module_data['id']
     desc=module_data['description']
-    name=module_data['name']
     log.info("Starting stage two parse")
 
     chunk = parse(module_full)
@@ -143,7 +150,7 @@ def generate(module_name: str, module_path: str, settings: SettingsDict, modules
         generator.callbacks,
         generator.offhandles,
         generator.functions,
-        name,
+        module_id,
         desc,
         prf,
         module_path,
@@ -245,7 +252,6 @@ def discover_modules(log):
         return {}
     #now have a list of module filepaths
     modules={}
-    print(paths)
     for i in paths:
         #get modules id
         try:
@@ -256,5 +262,4 @@ def discover_modules(log):
             log.warn(f"Couldn't find module id for {i}")
             continue
         modules.update({module_id:i})
-    print(modules)
     return modules
