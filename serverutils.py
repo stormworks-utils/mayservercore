@@ -2,7 +2,9 @@ import platform
 import subprocess
 from pathlib import Path
 from logger import Logger
-
+import os
+import re
+SERVER_MATCH=re.compile('^server(?:64)?.exe$')
 
 def _get_os():
     return platform.system()
@@ -14,10 +16,8 @@ def update_game(path: Path, game_id: int):
     proc = subprocess.Popen(command, stdout=subprocess.PIPE)
     # in theory, line should always be the last line of the commands output, but for whatever reason, it is not being
     # updated regularly. If it where, this would allow a much more fancy progress bar
-    while line := proc.stdout.readline():
+    while line := proc.stdout.read():
         ...
-
-
 def update(server: Path):
     log = Logger("Server updater")
     server = server.absolute() / 'bin'
@@ -38,6 +38,26 @@ def makedir(server: Path):
 
 def runserver(server):
     if _get_os() == "Windows":
-        subprocess.Popen(rf'{server}\bin\server64.exe +server_dir {server}\conf\\')
+        subprocess.Popen(f'servers\\{server}\\bin\\server64.exe +server_dir ..\\..\\{server}\\conf\\',cwd=f'servers\\{server}\\bin\\')
     else:
-        subprocess.Popen(rf'./{server}/bin/server64.exe +server_dir ./{server}/conf/')
+        subprocess.Popen(rf'./servers/{server}/bin/server64.exe +server_dir ../../{server}/conf/',cwd=f'servers/{server}/bin/')
+
+def getServerPID(server):
+    if _get_os() == "Windows":
+        os.system('WMIC path win32_process get Caption,Processid,Commandline>temp') #get processes with their args and pids
+        with open('temp') as f:
+            procs=f.read().replace(chr(0),'').split('\n') #load the results
+        os.remove('temp') #remove temp file
+        procs=[[j for j in i.split(' ') if j!=''] for i in procs if i!=''] #remove padding and split into args
+        procs=[i for i in procs if len(i)==5] #remove all processes without args
+        procs=[i for i in procs if SERVER_MATCH.match(i[0])] #find servers
+
+        for i in procs:
+            if server in i[3]:
+                print(i)
+                return i[-1]
+
+def killserver(server):
+    pid=getServerPID(server)
+    if _get_os() == "Windows":
+        subprocess.Popen(f'taskkill /PID {pid} /F')
