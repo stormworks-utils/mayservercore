@@ -151,6 +151,8 @@ def fetch_setting(
         value = default
     except AssertionError:
         value = default
+    except KeyError:
+        value = default
     if isinstance(value, str):
         if value.lower() in ("true", "false"):
             value = value.lower() == "true"
@@ -216,9 +218,9 @@ class Generate(basic_walker.NoneWalker):
             for a, b in c_function:
                 if index == a and value == b:
                     new_name: str = f"mscfunction_{self.prefix}{index}"
-                    node.variable_name.variable_name = "mschttp"
-                    node.lhs.variable_name = new_name
-                    self.functions[index].append(new_name)
+                    node.variable_name.variable_name = new_name
+                    node.lhs.variable_name = "mschttp"
+                    self.functions[value].append(new_name)
         super().visit_NamedIndex(node)
 
 def discover_modules(log):
