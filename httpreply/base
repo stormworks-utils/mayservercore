@@ -1,2 +1,2 @@
-    elseif module=='PREFIX' then
-        NAME(PORT, request, reply)
+    elseif module=='NAME' then
+        offhandle_PREFIX_httpReply(PORT, request, reply)

@@ -1,3 +1,3 @@
-function blank(a)
-    return a
+function blank(_a)
+    return _a
 end

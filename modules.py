@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import string
 
 from logger import Logger
@@ -54,21 +55,23 @@ c_function: list[tuple[str, str]] = [("server", "httpGet")]
 SettingsDict = dict[str, Union["SettingsDict", str, int, float, bool]]
 
 
-def generate(module: str, settings: SettingsDict, modules):
+def generate(module_name: str, module_path: str, settings: SettingsDict, modules):
     log = Logger("Module proccessor")
-    log.info(f'Started generator for module "{module}"')
+    log.info(f'Started generator for module "{module_name}"')
     log.info("Loading layer")
-    module_path: Path = Path("modules") / module
+    module_path: Path = Path("modules") / module_path
     try:
         with (module_path / "module.lua").open() as module_fs:
             module_full = module_fs.read()
     except:
-        error_handler.handleFatal(log, "Unable to fetch module")
+        error_handler.handleSkippable(log, f"Unable to fetch module {module_name}")
+        return ('',{},{},{},'','','','',)
     try:
         with (module_path / "meta.json").open() as module_meta:
             module_data: dict[str] = json.load(module_meta)
     except:
-        error_handler.handleFatal(log, "Unable to fetch module data")
+        error_handler.handleSkippable(log, f"Unable to fetch module data for {module_name}")
+        return ('', {}, {}, {}, '', '', '', '',)
     dependencies = module_data.get("dependencies") or []
     incompatibles = module_data.get("incompatibles") or []
     for i in dependencies:
@@ -76,14 +79,14 @@ def generate(module: str, settings: SettingsDict, modules):
         if val and (mod not in modules):
             error_handler.handleFatal(
                 log,
-                f"Module {module} has unmet dependencies ({mod})",
+                f"Module {module_name} has unmet dependencies ({mod})",
             )
     for i in incompatibles:
         val, mod = parse_dependency(i, settings)
         if val and (mod in modules):
             error_handler.handleFatal(
                 log,
-                f"Module {module} is incompatible with another active module ({mod})",
+                f"Module {module_name} is incompatible with another active module ({mod})",
             )
 
     log.info("Requirements validated")
@@ -91,9 +94,8 @@ def generate(module: str, settings: SettingsDict, modules):
     prf: str = "".join(random.choices(string.ascii_letters, k=10))
     prefix: str = prf + "_"
 
-    module_id = module_data["id"]
-    desc = module_data["description"]
-    name = module_data["name"]
+    module_id=module_data['id']
+    desc=module_data['description']
     log.info("Starting stage two parse")
 
     chunk = parse(module_full)
@@ -114,10 +116,10 @@ def generate(module: str, settings: SettingsDict, modules):
         generator.callbacks,
         generator.offhandles,
         generator.functions,
-        name,
+        module_id,
         desc,
         prf,
-        module,
+        module_path,
     )
 
 
@@ -148,6 +150,8 @@ def fetch_setting(
     except IndexError:
         value = default
     except AssertionError:
+        value = default
+    except KeyError:
         value = default
     if isinstance(value, str):
         if value.lower() in ("true", "false"):
@@ -214,7 +218,25 @@ class Generate(basic_walker.NoneWalker):
             for a, b in c_function:
                 if index == a and value == b:
                     new_name: str = f"mscfunction_{self.prefix}{index}"
-                    node.variable_name.variable_name = "mschttp"
-                    node.lhs.variable_name = new_name
-                    self.functions[index].append(new_name)
+                    node.variable_name.variable_name = new_name
+                    node.lhs.variable_name = "mschttp"
+                    self.functions[value].append(new_name)
         super().visit_NamedIndex(node)
+
+def discover_modules(log):
+    paths=next(os.walk('modules'),[None,None])[1]
+    if paths==None:
+        return {}
+    #now have a list of module filepaths
+    modules={}
+    for i in paths:
+        #get modules id
+        try:
+            with open(f'modules/{i}/meta.json') as metadata:
+                module_data=json.load(metadata)
+            module_id=module_data['id']
+        except:
+            log.warn(f"Couldn't find module id for {i}")
+            continue
+        modules.update({module_id:i})
+    return modules
