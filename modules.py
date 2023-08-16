@@ -72,8 +72,8 @@ def generate(module_name: str, module_path: str, settings: SettingsDict, modules
     except:
         error_handler.handleSkippable(log, f"Unable to fetch module data for {module_name}")
         return ('', {}, {}, {}, '', '', '', '',)
-    dependencies=module_data['dependencies']
-    incompatibles=module_data['incompatibles']
+    dependencies=module_data.get('dependencies') or []
+    incompatibles=module_data.get('incompatibles') or []
     for i in dependencies:
         try:
             setting, mod, default = i.split(":")
