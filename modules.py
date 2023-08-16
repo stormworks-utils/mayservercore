@@ -72,51 +72,17 @@ def generate(module_name: str, module_path: str, settings: SettingsDict, modules
     except:
         error_handler.handleSkippable(log, f"Unable to fetch module data for {module_name}")
         return ('', {}, {}, {}, '', '', '', '',)
-    dependencies=module_data.get('dependencies') or []
-    incompatibles=module_data.get('incompatibles') or []
+    dependencies = module_data.get("dependencies") or []
+    incompatibles = module_data.get("incompatibles") or []
     for i in dependencies:
-        try:
-            setting, mod, default = i.split(":")
-        except:
-            error_handler.handleFatal(log,f'Invalid dependency string \'{i}\' for module {module_name}')
-            continue
-        invert=False
-        if setting.startswith("!"):
-            setting = setting[1:]
-            invert = True 
-        setting: list[str] = setting.split(".")
-        try:
-            val: str = settings
-            for j in setting:
-                val = val[j]
-        except:
-            val = default
-        if invert:
-            val=not val
+        val, mod = parse_dependency(i, settings)
         if val and (mod not in modules):
             error_handler.handleFatal(
                 log,
                 f"Module {module_name} has unmet dependencies ({mod})",
             )
     for i in incompatibles:
-        try:
-            setting, mod, default = i.split(":")
-        except:
-            error_handler.handleFatal(log,f'Invalid incompatibility string \'{i}\' for module {module_name}')
-            continue
-        invert=False
-        if setting.startswith("!"):
-            setting = setting[1:]
-            invert = True
-        setting: list[str] = setting.split(".")
-        try:
-            val: str = settings
-            for j in setting:
-                val = val[j]
-        except:
-            val = default
-        if invert:
-            val = not val
+        val, mod = parse_dependency(i, settings)
         if val and (mod in modules):
             error_handler.handleFatal(
                 log,
@@ -156,15 +122,44 @@ def generate(module_name: str, module_path: str, settings: SettingsDict, modules
         module_path,
     )
 
-def fetchSetting(settings,default,setting):
-    setting: list[str] = setting.split(".")
+
+def parse_dependency(dependency: str, settings: SettingsDict) -> tuple[bool, str]:
+    setting, mod, default = dependency.split(":")
+    print(f"{setting},{mod},{default}")
+    invert = False
+    if setting.startswith("!"):
+        setting = setting[1:]
+        invert = True
+    val: bool = bool(fetch_setting(settings, default, setting))
+    if invert:
+        val = not val
+    return val, mod
+
+
+def fetch_setting(
+    settings: SettingsDict, default: str, name: str
+) -> bool | int | float | str:
+    name_parts: list[str] = name.split(".")
     try:
-        val: str = settings
-        for j in setting:
-            val = val[j]
-    except:
-        val = default
-    return val
+        setting: SettingsDict | bool | int | float | str = settings
+        for i in name_parts:
+            assert isinstance(setting, dict), "Invalid setting"
+            setting = setting[i]
+        value = setting
+        assert isinstance(value, (str, int, float, bool)), "Invalid setting"
+    except IndexError:
+        value = default
+    except AssertionError:
+        value = default
+    if isinstance(value, str):
+        if value.lower() in ("true", "false"):
+            value = value.lower() == "true"
+        try:
+            value = float(value)
+        except ValueError:
+            pass
+    return value
+
 
 class Generate(basic_walker.NoneWalker):
     def __init__(self, prefix: str, module_id: str, settings: SettingsDict):
@@ -176,27 +171,7 @@ class Generate(basic_walker.NoneWalker):
         self.functions: dict[str, list[str]] = {name: [] for _, name in c_function}
 
     def _get_setting(self, name: str, default: str) -> bool | int | float | str:
-        name_parts: list[str] = name.split(".")
-        try:
-            setting: SettingsDict | bool | int | float | str = self.settings
-            for i in name_parts:
-                setting = setting[i]
-            value = setting
-            assert isinstance(value, (str, int, float, bool)), "Invalid setting"
-        except IndexError:
-            value = default
-        except AssertionError:
-            value = default
-        except KeyError:
-            value = default
-        if isinstance(value, str):
-            if value.lower() in ("true", "false"):
-                value = value.lower() == "true"
-            try:
-                value = float(value)
-            except ValueError:
-                pass
-        return value
+        return fetch_setting(self.settings, default, name)
 
     def visit_Name(self, node: basic_walker.Name) -> None:
         if node.variable_name.startswith("__"):
@@ -240,10 +215,10 @@ class Generate(basic_walker.NoneWalker):
             index, value = str(node.lhs), str(node.variable_name)
             for a, b in c_function:
                 if index == a and value == b:
-                    new_name: str = f"mscfunction_{self.prefix}{value}"
-                    node.variable_name.variable_name = new_name
-                    node.lhs.variable_name = "mschttp"
-                    self.functions[value].append(new_name)
+                    new_name: str = f"mscfunction_{self.prefix}{index}"
+                    node.variable_name.variable_name = "mschttp"
+                    node.lhs.variable_name = new_name
+                    self.functions[index].append(new_name)
         super().visit_NamedIndex(node)
 
 def discover_modules(log):
