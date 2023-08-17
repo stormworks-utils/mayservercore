@@ -1,0 +1,6 @@
+{
+  "id": "discordchatrelay",
+  "description": "Forward in-game chat to a discord webhook",
+  "dependencies": [],
+  "incompatibles": []
+}
