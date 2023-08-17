@@ -1,300 +1,251 @@
+from __future__ import annotations
+
 import json
+import os
 import string
 
 from logger import Logger
 import error_handler
-from luaparser import ast, astnodes
 import random
-from typing import List
+from typing import Union
+from pathlib import Path
+from tumfl import parse, basic_walker, format
+from tumfl.Token import Token, TokenType
 
-callbacks=['onTick', 'onCreate', 'onDestroy','onCustomCommand', 'onChatMessage', 'onPlayerJoin', 'onPlayerSit', 'onCharacterSit', 'onCharacterUnsit', 'onCharacterPickup', 'onEquipmentPickup', 'onEquipmentDrop', 'onCreaturePickup', 'onPlayerRespawn', 'onPlayerLeave', 'onToggleMap', 'onPlayerDie', 'onVehicleSpawn', 'onVehicleLoad', 'onVehicleUnload', 'onVehicleTeleport', 'onVehicleDespawn', 'onSpawnAddonComponent', 'onVehicleDamaged', 'onFireExtinguished', 'onVehicleUnload', 'onForestFireSpawned', 'onForestFireExtinguised', 'onButtonPress', 'onObjectLoad', 'onObjectUnload', 'onTornado', 'onMeteor', 'onTsunami', 'onWhirlpool', 'onVolcano']
-offhandle=['httpReply','onFirst']
-c_function=[('server','httpGet')]
+callbacks: list[str] = [
+    "onTick",
+    "onCreate",
+    "onDestroy",
+    "onCustomCommand",
+    "onChatMessage",
+    "onPlayerJoin",
+    "onPlayerSit",
+    "onCharacterSit",
+    "onCharacterUnsit",
+    "onCharacterPickup",
+    "onEquipmentPickup",
+    "onEquipmentDrop",
+    "onCreaturePickup",
+    "onPlayerRespawn",
+    "onPlayerLeave",
+    "onToggleMap",
+    "onPlayerDie",
+    "onVehicleSpawn",
+    "onVehicleLoad",
+    "onVehicleUnload",
+    "onVehicleTeleport",
+    "onVehicleDespawn",
+    "onSpawnAddonComponent",
+    "onVehicleDamaged",
+    "onFireExtinguished",
+    "onVehicleUnload",
+    "onForestFireSpawned",
+    "onForestFireExtinguised",
+    "onButtonPress",
+    "onObjectLoad",
+    "onObjectUnload",
+    "onTornado",
+    "onMeteor",
+    "onTsunami",
+    "onWhirlpool",
+    "onVolcano",
+]
+offhandle: list[str] = ["httpReply", "onFirst"]
+c_function: list[tuple[str, str]] = [("server", "httpGet")]
+SettingsDict = dict[str, Union["SettingsDict", str, int, float, bool]]
 
-def generate(module,settings, modules):
-    log = Logger('Module proccessor')
-    log.info(f'Started generator for module "{module}"')
-    log.info('Loading layer')
+
+def generate(module_name: str, module_path: str, settings: SettingsDict, modules):
+    log = Logger("Module proccessor")
+    log.info(f'Started generator for module "{module_name}"')
+    log.info("Loading layer")
+    module_path: Path = Path("modules") / module_path
     try:
-        with open(f"modules/{module}/module.lua", 'r') as module_fs:
-            module_full=module_fs.read()
+        with (module_path / "module.lua").open() as module_fs:
+            module_full = module_fs.read()
     except:
-        error_handler.handleFatal(log,"Unable to fetch module")
+        error_handler.handleSkippable(log, f"Unable to fetch module {module_name}")
+        return ('',{},{},{},'','','','',)
     try:
-        with open(f"modules/{module}/require.txt", 'r') as require_fs:
-            requires: List[str] = require_fs.readlines()
+        with (module_path / "meta.json").open() as module_meta:
+            module_data: dict[str] = json.load(module_meta)
     except:
-        error_handler.handleFatal(log,"Unable to fetch requirements")
-
-    for i in requires:
-        inver = False
-        incom = False
-        setting, mod, default = i.split(':')
-        if setting.startswith('!'):
-            setting = setting[1:]
-            inver = True
-        if setting.startswith('#'):
-            setting = setting[1:]
-            incom = True
-        target_setting = setting.split('.')
-        try:
-            val = settings
-            for j in target_setting:
-                val = val[j]
-        except:
-            val = default
-        if (val and not inver) or (inver and not val):
-            if incom:
-                error_handler.handleFatal(log, f"Module {module} is incompatible with another active module ({mod})")
-            else:
-                if not mod in modules:
-                    error_handler.handleFatal(log, f"Module {module} has unmet requirements ({mod})")
+        error_handler.handleSkippable(log, f"Unable to fetch module data for {module_name}")
+        return ('', {}, {}, {}, '', '', '', '',)
+    dependencies = module_data.get("dependencies") or []
+    incompatibles = module_data.get("incompatibles") or []
+    for i in dependencies:
+        val, mod = parse_dependency(i, settings)
+        if val and (mod not in modules):
+            error_handler.handleFatal(
+                log,
+                f"Module {module_name} has unmet dependencies ({mod})",
+            )
+    for i in incompatibles:
+        val, mod = parse_dependency(i, settings)
+        if val and (mod in modules):
+            error_handler.handleFatal(
+                log,
+                f"Module {module_name} is incompatible with another active module ({mod})",
+            )
 
     log.info("Requirements validated")
     # create prefix for private vars/functions to make sure they're not accessible
-    prf = ''.join(random.choices(string.ascii_letters, k=10))
-    prefix = prf+'_'
+    prf: str = "".join(random.choices(string.ascii_letters, k=10))
+    prefix: str = prf + "_"
 
-    log.info("Starting stage one parse")
-    #parse MSC flags
-    name = 'None'
-    desc = 'None'
-    id = prefix #MODID is used for hidden var prefixes, so if no MODID is given, use prefix to avoid collisions
-
-    for i in module_full.split("\n"):
-        if i.startswith('--###'):
-            tagfull = i[5:].split(':', 1)
-            tag = tagfull[0]
-            data = tagfull[1]
-            if tag == 'NAME':
-                name = data
-            elif tag == 'DESC':
-                desc = data
-            elif tag == 'MODID':
-                id = data
-                prefix = prefix+id+'_'
+    module_id=module_data['id']
+    desc=module_data['description']
     log.info("Starting stage two parse")
 
-    vel=ast.parse(module_full)
+    chunk = parse(module_full)
     log.info("AST generated")
 
-    calls, handles, functions =_recursive_generate(vel, prefix, id, settings, callbacks, offhandle, c_function)
-    log.info(f"Processing complete, found {len(calls)} callbacks, {len(functions)} special function calls, and {len(handles)} handlers.")
-    code=ast.to_lua_source(vel)
-    log.info("Module code generated")
-    return code, calls, handles, functions, name, desc, prf, module
+    generator: Generate = Generate(prefix, module_id.replace(' ','_'), settings)
+    generator.visit(chunk)
+    log.info(
+        f"Processing complete, found {len([i for i in generator.callbacks.values() if i!=[]])} callbacks, "
+        f"{len([i for i in generator.functions.values() if i!=[]])} special function calls, "
+        f"and {len([i for i in generator.offhandles.values() if i!=[]])} handlers."
+    )
 
-def _recursive_generate(ast_code, prefix, id, settings, callnames, offnames, c_function):
-    callbacks= {}
-    offhandle={}
-    functions={}
-    tp=type(ast_code)
-    if tp==list:
-        for i in ast_code:
-            cb, oh, fc = _recursive_generate(i, prefix, id, settings, callnames, offnames, c_function)
-            for oname in cb.keys():
-                names = cb[oname]
-                for name in names:
-                    if oname in callbacks.keys():
-                        callbacks[oname].append(name)
-                    else:
-                        callbacks.update({oname: [name]})
-            for oname in oh.keys():
-                names = oh[oname]
-                for name in names:
-                    if oname in offhandle.keys():
-                        offhandle[oname].append(name)
-                    else:
-                        offhandle.update({oname: [name]})
-            for oname in fc.keys():
-                names = fc[oname]
-                for name in names:
-                    if oname in functions.keys():
-                        functions[oname].append(name)
-                    else:
-                        functions.update({oname: [name]})
-    elif tp==astnodes.Name:
-        if ast_code.id[:2]=='__':
-            #protected var
-            ast_code.id=prefix+ast_code.id[2:]
-        elif ast_code.id[:1]=='_':
-            #private var
-            ast_code.id=id+'_'+ast_code.id[1:]
-    elif tp==astnodes.Block:
-        cb, oh, fc = _recursive_generate(ast_code.body, prefix, id, settings, callnames, offnames, c_function)
-        for oname in cb.keys():
-            names = cb[oname]
-            for name in names:
-                if oname in callbacks.keys():
-                    callbacks[oname].append(name)
-                else:
-                    callbacks.update({oname: [name]})
-        for oname in oh.keys():
-            names = oh[oname]
-            for name in names:
-                if oname in offhandle.keys():
-                    offhandle[oname].append(name)
-                else:
-                    offhandle.update({oname: [name]})
-        for oname in fc.keys():
-            names = fc[oname]
-            for name in names:
-                if oname in functions.keys():
-                    functions[oname].append(name)
-                else:
-                    functions.update({oname: [name]})
-    elif tp == astnodes.Chunk:
-        cb, oh, fc = _recursive_generate(ast_code.body, prefix, id, settings, callnames, offnames, c_function)
-        for oname in cb.keys():
-            names = cb[oname]
-            for name in names:
-                if oname in callbacks.keys():
-                    callbacks[oname].append(name)
-                else:
-                    callbacks.update({oname: [name]})
-        for oname in oh.keys():
-            names = oh[oname]
-            for name in names:
-                if oname in offhandle.keys():
-                    offhandle[oname].append(name)
-                else:
-                    offhandle.update({oname: [name]})
-        for oname in fc.keys():
-            names = fc[oname]
-            for name in names:
-                if oname in functions.keys():
-                    functions[oname].append(name)
-                else:
-                    functions.update({oname: [name]})
-    elif tp == astnodes.Index:
-        idx, value = ast_code.idx, ast_code.value
-        if type(idx)==astnodes.Name and type(value)==astnodes.Name:
-            idx, value = idx.id, value.id
-            for a,b in c_function:
-                if idx==b and value==a:
-                    oname = idx
-                    name = 'mscfunction_' + prefix + idx
-                    ast_code.value.id="mschttp"
-                    ast_code.idx.id=name
-                    if oname in functions.keys():
-                        functions[oname].append(name)
-                    else:
-                        functions.update({oname: [name]})
-    elif tp == astnodes.Assign:
-        for i in ast_code.targets:
-            cb, oh, fc = _recursive_generate(i, prefix, id, settings, callnames, offnames, c_function)
-            for oname in cb.keys():
-                names = cb[oname]
-                for name in names:
-                    if oname in callbacks.keys():
-                        callbacks[oname].append(name)
-                    else:
-                        callbacks.update({oname: [name]})
-            for oname in oh.keys():
-                names = oh[oname]
-                for name in names:
-                    if oname in offhandle.keys():
-                        offhandle[oname].append(name)
-                    else:
-                        offhandle.update({oname: [name]})
-            for oname in fc.keys():
-                names = fc[oname]
-                for name in names:
-                    if oname in functions.keys():
-                        functions[oname].append(name)
-                    else:
-                        functions.update({oname: [name]})
-        for ind, i in enumerate(ast_code.values):
-            if type(i)==astnodes.String:
-                if i.s[:9]=='###CONFIG':
-                    x=i.s.split(':')
-                    target_setting=x[1].split('.')
-                    try:
-                        val=settings
-                        for j in target_setting:
-                            val=val[j]
-                    except:
-                        val=x[2]
-                    if type(val)==bool or val in ['true', 'false']:
-                        if val in ['true', 'false']:
-                            val=val=='true'
-                        if val:
-                            ast_code.values[ind]=astnodes.TrueExpr()
-                        else:
-                            ast_code.values[ind]=astnodes.FalseExpr()
-                    if type(val) in [int, float] or (type(val)==str and val.replace('.','',1).isdigit()):
-                        if type(val)==str:
-                            val=float(val)
-                        ast_code.values[ind] = astnodes.Number(val)
-                    else:
-                        i.s=str(val)
+    code = format(chunk)
+    log.info("Module code generated")
+    return (
+        code,
+        generator.callbacks,
+        generator.offhandles,
+        generator.functions,
+        module_id,
+        desc,
+        prf,
+        module_path,
+    )
+
+
+def parse_dependency(dependency: str, settings: SettingsDict) -> tuple[bool, str]:
+    setting, mod, default = dependency.split(":")
+    print(f"{setting},{mod},{default}")
+    invert = False
+    if setting.startswith("!"):
+        setting = setting[1:]
+        invert = True
+    val: bool = bool(fetch_setting(settings, default, setting))
+    if invert:
+        val = not val
+    return val, mod
+
+
+def fetch_setting(
+    settings: SettingsDict, default: str, name: str
+) -> bool | int | float | str:
+    name_parts: list[str] = name.split(".")
+    try:
+        setting: SettingsDict | bool | int | float | str = settings
+        for i in name_parts:
+            assert isinstance(setting, dict), "Invalid setting"
+            setting = setting[i]
+        value = setting
+        assert isinstance(value, (str, int, float, bool)), "Invalid setting"
+    except IndexError:
+        value = default
+    except AssertionError:
+        value = default
+    except KeyError:
+        value = default
+    if isinstance(value, str):
+        if value.lower() in ("true", "false"):
+            value = value.lower() == "true"
+        try:
+            value = float(value)
+        except ValueError:
+            pass
+    return value
+
+
+class Generate(basic_walker.NoneWalker):
+    def __init__(self, prefix: str, module_id: str, settings: SettingsDict):
+        self.prefix: str = prefix
+        self.module_id: str = module_id
+        self.settings: SettingsDict = settings
+        self.callbacks: dict[str, list[str]] = {name: [] for name in callbacks}
+        self.offhandles: dict[str, list[str]] = {name: [] for name in offhandle}
+        self.functions: dict[str, list[str]] = {name: [] for _, name in c_function}
+
+    def _get_setting(self, name: str, default: str) -> bool | int | float | str:
+        return fetch_setting(self.settings, default, name)
+
+    def visit_Name(self, node: basic_walker.Name) -> None:
+        print(node.__dict__)
+        print(node.variable_name[:2])
+        if node.variable_name[:2] == '__':
+            print(node.variable_name, 'publ')
+            # public var
+            # dont use this unless you need to access savedata or something
+            node.variable_name = node.variable_name[2:].replace(' ','_')
+        elif node.variable_name[:1] == '_':
+            print(node.variable_name, 'hidd')
+            # private var
+            node.variable_name = self.module_id + '_' + node.variable_name[1:].replace(' ','_')
+        else:
+            print(node.token.value,'priv')
+            node.variable_name = self.prefix + node.variable_name.replace(' ','_')
+        print(node.variable_name)
+
+    def visit_String(self, node: basic_walker.String) -> None:
+        if node.value.startswith("###CONFIG"):
+            parts: list[str] = node.value.split(":")
+            setting = self._get_setting(parts[1], parts[2])
+            if isinstance(setting, bool):
+                token_type: TokenType = TokenType.TRUE if setting else TokenType.FALSE
+                new_node = basic_walker.Boolean.from_token(
+                    Token(token_type, token_type.value, 0, 0)
+                )
+                assert node.parent_class
+                node.parent_class.replace_child(node, new_node)
+            elif isinstance(setting, (int, float)):
+                ...
             else:
-                cb, oh, fc = _recursive_generate(i, prefix, id, settings, callnames, offnames, c_function)
-                for oname in cb.keys():
-                    names = cb[oname]
-                    for name in names:
-                        if oname in callbacks.keys():
-                            callbacks[oname].append(name)
-                        else:
-                            callbacks.update({oname: [name]})
-                for oname in oh.keys():
-                    names = oh[oname]
-                    for name in names:
-                        if oname in offhandle.keys():
-                            offhandle[oname].append(name)
-                        else:
-                            offhandle.update({oname: [name]})
-                for oname in fc.keys():
-                    names = fc[oname]
-                    for name in names:
-                        if oname in functions.keys():
-                            functions[oname].append(name)
-                        else:
-                            functions.update({oname: [name]})
-    else:
-        if tp==astnodes.Function:
-            name=ast_code.name.id
-            if name.strip() in callnames:
-                oname=name
-                name='callback_'+prefix+name
-                if oname in callbacks.keys():
-                    callbacks[oname].append(name)
-                else:
-                    callbacks.update({oname:[name]})
-                ast_code.name.id = name
-            if name in offnames:
-                oname=name
-                name='offhandle_'+prefix+name
-                if oname in offhandle.keys():
-                    offhandle[oname].append(name)
-                else:
-                    offhandle.update({oname:[name]})
-                ast_code.name.id = name
-        for i in ast_code.__dict__.values():
-            if not type(i)==list:
-                i=[i]
-            for j in i:
-                if 'luaparser.astnodes.' in str(type(j)):
-                    cb, oh, fc =_recursive_generate(j, prefix, id, settings, callnames, offnames, c_function)
-                    for oname in cb.keys():
-                        names = cb[oname]
-                        for name in names:
-                            if oname in callbacks.keys():
-                                callbacks[oname].append(name)
-                            else:
-                                callbacks.update({oname: [name]})
-                    for oname in oh.keys():
-                        names = oh[oname]
-                        for name in names:
-                            if oname in offhandle.keys():
-                                offhandle[oname].append(name)
-                            else:
-                                offhandle.update({oname: [name]})
-                    for oname in fc.keys():
-                        names = fc[oname]
-                        for name in names:
-                            if oname in functions.keys():
-                                functions[oname].append(name)
-                            else:
-                                functions.update({oname: [name]})
-    return callbacks, offhandle, functions
+                node.value = str(setting)
+
+    def visit_FunctionDefinition(self, node: basic_walker.FunctionDefinition) -> None:
+        if len(node.names) == 1:
+            name: str = node.names[0].variable_name.replace(' ','_')
+            prefixed_name: str = name
+            if name in callbacks:
+                prefixed_name = f"callback_{self.prefix}{name}"
+                self.callbacks[name].append(prefixed_name)
+            elif name in offhandle:
+                prefixed_name = f"offhandle_{self.prefix}{name}"
+                self.offhandles[name].append(prefixed_name)
+            node.names[0].variable_name = prefixed_name
+        super().visit_FunctionDefinition(node)
+
+    def visit_NamedIndex(self, node: basic_walker.NamedIndex) -> None:
+        if isinstance(node.lhs, basic_walker.Name):
+            index, value = str(node.lhs), str(node.variable_name)
+            for a, b in c_function:
+                if index == a and value == b:
+                    new_name: str = f"mscfunction_{self.prefix}{index}"
+                    node.variable_name.variable_name = new_name
+                    node.lhs.variable_name = "mschttp"
+                    self.functions[value].append(new_name)
+        super().visit_NamedIndex(node)
+
+def discover_modules(log):
+    paths=next(os.walk('modules'),[None,None])[1]
+    if paths==None:
+        return {}
+    #now have a list of module filepaths
+    modules={}
+    for i in paths:
+        #get modules id
+        try:
+            with open(f'modules/{i}/meta.json') as metadata:
+                module_data=json.load(metadata)
+            module_id=module_data['id']
+        except:
+            log.warn(f"Couldn't find module id for {i}")
+            continue
+        modules.update({module_id:i})
+    return modules
