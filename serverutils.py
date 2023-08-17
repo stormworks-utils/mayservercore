@@ -58,5 +58,9 @@ def getServerPID(server):
 
 def killserver(server):
     pid=getServerPID(server)
-    if _get_os() == "Windows":
-        subprocess.Popen(f'taskkill /PID {pid} /F')
+    if pid:
+        if _get_os() == "Windows":
+            subprocess.Popen(f'taskkill /PID {pid} /F')
+
+def isServerRunning(server):
+    return getServerPID(server) or False
