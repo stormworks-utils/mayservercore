@@ -54,7 +54,6 @@ def getServerPID(server):
 
         for i in procs:
             if server in i[3]:
-                print(i)
                 return i[-1]
 
 def killserver(server):

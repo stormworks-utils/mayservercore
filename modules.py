@@ -125,7 +125,6 @@ def generate(module_name: str, module_path: str, settings: SettingsDict, modules
 
 def parse_dependency(dependency: str, settings: SettingsDict) -> tuple[bool, str]:
     setting, mod, default = dependency.split(":")
-    print(f"{setting},{mod},{default}")
     invert = False
     if setting.startswith("!"):
         setting = setting[1:]
@@ -176,19 +175,14 @@ class Generate(basic_walker.NoneWalker):
         return fetch_setting(self.settings, default, name)
 
     def visit_Name(self, node: basic_walker.Name) -> None:
-        print(node.__dict__)
-        print(node.variable_name[:2])
         if node.variable_name[:2] == '__':
-            print(node.token.value, 'priv')
             node.variable_name = self.prefix + node.variable_name.replace(' ', '_')
             node.variable_name = node.variable_name[2:].replace(' ','_')
         elif node.variable_name[:1] == '_':
-            print(node.variable_name, 'hidd')
             # private var
             node.variable_name = self.module_id + '_' + node.variable_name[1:].replace(' ','_')
         else:
             pass
-        print(node.variable_name)
 
     def visit_String(self, node: basic_walker.String) -> None:
         if node.value.startswith("###CONFIG"):
