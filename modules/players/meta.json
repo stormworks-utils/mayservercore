@@ -1,0 +1,6 @@
+{
+  "id": "players",
+  "description": "Low level player tracking",
+  "dependencies": [],
+  "incompatibles": []
+}

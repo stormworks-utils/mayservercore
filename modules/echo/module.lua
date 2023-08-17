@@ -1,7 +1,7 @@
-_webhook='###CONFIG:webhook:none'
+webhook='###CONFIG:webhook:none'
 function onChatMessage(peerID, name, message)
-    if _webhook~='none' then
-        server.httpGet('chat',{name=name,message=message,webhook=_webhook})
+    if webhook~='none' then
+        server.httpGet('chat',{name=name,message=message,webhook=webhook})
     end
 end
 

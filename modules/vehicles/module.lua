@@ -1,3 +1,3 @@
---###NAME:Vehicle manager
---###DESC:Vehicle management system for tracking vehicle ownership
---###MODID:vehicles
+function blank(__a)
+    return __a
+end

@@ -128,7 +128,6 @@ def load_extras(profile: Path,log: Logger):
         else:
             error_handler.handleSkippable(log,f'Addon "{i}" cannot be found')
 
-
 def make_modules(path: Path):
     log = Logger("Module generator")
     log.info("Starting stage 2 configuration")
@@ -143,7 +142,7 @@ def make_modules(path: Path):
     for i in settings.keys():
         if settings[i]['enabled']:
             modules.append(i)
-    modulealias = module_gen.discover_modules(log)
+    modulealias=module_gen.discover_modules(log)
     for module in modules:
         generated_modules.append(module_gen.generate(module, modulealias[module], settings[module], modules))
     return generated_modules
@@ -166,16 +165,16 @@ def generate(path: Path, extract=True, http_port=1000, update=False, write_full_
         modulealias_reverse = module_gen.discover_modules(log)
         modulealias = {modulealias_reverse[i]: i for i in modulealias_reverse.keys()}
         log.info("Compiling modules")
-        moduleprefixes = {}
+        moduleprefixes={}
         for module in modules:
             code, calls, handles, c_func, name, desc, prefix, file_name = module
-            moduleprefixes.update({prefix: name})
+            moduleprefixes.update({prefix:name})
             if name == '':
                 continue
             compiled_modules += f'''--{name}: {desc}
-
+    
     {code.strip()}
-
+    
     '''
             for oname in calls.keys():
                 names = calls[oname]
@@ -204,9 +203,7 @@ def generate(path: Path, extract=True, http_port=1000, update=False, write_full_
         for callback in callbacks.keys():
             arguments = callback_args[callback]
             calls = callbacks[callback]
-            callback_defs += handlers.generate_handler('generic_callback',
-                                                       {'CALLBACK_NAME': callback, 'PARAMETERS': ','.join(arguments)},
-                                                       [{'CALLBACK': name} for name in calls], repl_head=True)
+            callback_defs += handlers.generate_handler('generic_callback',{'CALLBACK_NAME':callback,'PARAMETERS':','.join(arguments)},[{'CALLBACK':name} for name in calls], repl_head=True)
 
         callback_defs = callback_defs
         script = ''
