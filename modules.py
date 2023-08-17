@@ -179,17 +179,15 @@ class Generate(basic_walker.NoneWalker):
         print(node.__dict__)
         print(node.variable_name[:2])
         if node.variable_name[:2] == '__':
-            print(node.variable_name, 'publ')
-            # public var
-            # dont use this unless you need to access savedata or something
+            print(node.token.value, 'priv')
+            node.variable_name = self.prefix + node.variable_name.replace(' ', '_')
             node.variable_name = node.variable_name[2:].replace(' ','_')
         elif node.variable_name[:1] == '_':
             print(node.variable_name, 'hidd')
             # private var
             node.variable_name = self.module_id + '_' + node.variable_name[1:].replace(' ','_')
         else:
-            print(node.token.value,'priv')
-            node.variable_name = self.prefix + node.variable_name.replace(' ','_')
+            pass
         print(node.variable_name)
 
     def visit_String(self, node: basic_walker.String) -> None:
@@ -226,7 +224,7 @@ class Generate(basic_walker.NoneWalker):
             index, value = str(node.lhs), str(node.variable_name)
             for a, b in c_function:
                 if index == a and value == b:
-                    new_name: str = f"mscfunction_{self.prefix}{index}"
+                    new_name: str = f"mscfunction_{self.prefix}{value}"
                     node.variable_name.variable_name = new_name
                     node.lhs.variable_name = "mschttp"
                     self.functions[value].append(new_name)
