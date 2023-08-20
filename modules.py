@@ -65,15 +65,16 @@ def generate(module_name: str, module_path: str, settings: SettingsDict, modules
             module_full = module_fs.read()
     except:
         error_handler.handleSkippable(log, f"Unable to fetch module {module_name}")
-        return ('',{},{},{},'','','','',{})
+        return ('',{},{},{},'','','','',{},[])
     try:
         with (module_path / "meta.json").open() as module_meta:
             module_data: dict[str] = json.load(module_meta)
     except:
         error_handler.handleSkippable(log, f"Unable to fetch module data for {module_name}")
-        return ('', {}, {}, {}, '', '', '', '',{})
+        return ('', {}, {}, {}, '', '', '', '',{},[])
     dependencies = module_data.get("dependencies") or []
     incompatibles = module_data.get("incompatibles") or []
+    pyreq = module_data.get("pythonlibs") or []
     for i in dependencies:
         val, mod = parse_dependency(i, settings)
         if val and (mod not in modules):
@@ -121,6 +122,7 @@ def generate(module_name: str, module_path: str, settings: SettingsDict, modules
         prf,
         module_path,
         settings,
+        pyreq
     )
 
 

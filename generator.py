@@ -167,7 +167,7 @@ def generate(path: Path, extract=True, http_port=1000, update=False, write_full_
         log.info("Compiling modules")
         moduleprefixes={}
         for module in modules:
-            code, calls, handles, c_func, name, desc, prefix, file_name, msettings = module
+            code, calls, handles, c_func, name, desc, prefix, file_name, msettings, pylibs = module
             moduleprefixes.update({prefix:name})
             if name == '':
                 continue
@@ -244,7 +244,7 @@ def generate(path: Path, extract=True, http_port=1000, update=False, write_full_
         extensions = []
         extended_modules = []
         for module in modules:
-            code, calls, handles, c_func, name, desc, prefix, file_name, msettings = module
+            code, calls, handles, c_func, name, desc, prefix, file_name, msettings, pylibs = module
             has_ext = (file_name / Path('module.py')).exists()
             if has_ext:
                 extensions.append(prefix)
@@ -280,11 +280,16 @@ def generate(path: Path, extract=True, http_port=1000, update=False, write_full_
             file.write(svr)
 
         log.info('Writing python configuration')
+        needed_pylibs=[]
         for module in modules:
-            code, calls, handles, c_func, name, desc, prefix, file_name, msettings = module
+            code, calls, handles, c_func, name, desc, prefix, file_name, msettings, pylibs = module
             with open(f'{server_path}/py/{name.replace(" ","_")}_conf.json','w') as f:
                 json.dump(settings[name],f)
             #name,msettings
+            for i in pylibs:
+                needed_pylibs.append(i)
+
+        needed_pylibs=list(set(needed_pylibs))
 
         log.info('Creating persistent data directories')
         loadedmods=[]
@@ -300,6 +305,15 @@ def generate(path: Path, extract=True, http_port=1000, update=False, write_full_
             else:
                 if i.name not in [j.replace(' ','_') for j in module_names]:
                     shutil.rmtree(i)
+
+        log.info('Creating server virtualenv')
+        server_name=server_path.name
+        serverutils.makevenv(server_name)
+
+        log.info('Installing python modules')
+        for i in needed_pylibs:
+            log.info(f'Installing {i}')
+            serverutils.pipInstall(server_name,i)
 
         log.info('Server generation complete')
         return str(server_path).split('/')

@@ -2,5 +2,6 @@
   "id": "discord chat relay",
   "description": "Forward in-game chat to a discord webhook",
   "dependencies": [],
-  "incompatibles": []
+  "incompatibles": [],
+  "pythonlibs": ["requests","requests"]
 }

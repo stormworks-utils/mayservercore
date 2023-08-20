@@ -86,3 +86,15 @@ def getModules(server):
     server=Path('servers')/server
     with open(server/'conf'/'modules.json') as modfile:
         return json.load(modfile)
+
+def makevenv(server):
+    serverp = Path('servers') / server
+    shutil.rmtree(serverp / 'py'/ 'venv',True)
+    if _get_os()=='Windows':
+        os.system(f'python -m venv servers\\{server}\\py\\venv\\')
+        os.system(f"{serverp / 'py' / 'venv' / 'scripts' / 'activate.bat'}&&python -m pip install -q --upgrade pip")
+
+def pipInstall(server,lib):
+    serverp = Path('servers') / server
+    if _get_os() == 'Windows':
+        os.system(f"{serverp/'py'/'venv'/'scripts'/'activate.bat'}&&pip install -q {lib}")
