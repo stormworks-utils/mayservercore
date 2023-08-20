@@ -128,7 +128,7 @@ def load_extras(profile: Path,log: Logger):
         else:
             error_handler.handleSkippable(log,f'Addon "{i}" cannot be found')
 
-def make_module(path: Path):
+def make_modules(path: Path):
     log = Logger("Module generator")
     log.info("Starting stage 2 configuration")
     log.info("Loading modules configuration")
@@ -142,8 +142,9 @@ def make_module(path: Path):
     for i in settings.keys():
         if settings[i]['enabled']:
             modules.append(i)
+    modulealias=module_gen.discover_modules(log)
     for module in modules:
-        generated_modules.append(module_gen.generate(module, settings[module], modules))
+        generated_modules.append(module_gen.generate(module, modulealias[module], settings[module], modules))
     return generated_modules
 
 
@@ -157,14 +158,19 @@ def generate(path: Path, extract=True, http_port=1000, update=False, write_full_
             if not update:
                 log.warn("Server not found, forcing update")
             serverutils.update(server_path)
-        modules = make_module(profile_path)
+        modules = make_modules(profile_path)
         to_handle = {}
         callbacks = {}
         functions = {}
-
+        modulealias_reverse = module_gen.discover_modules(log)
+        modulealias = {modulealias_reverse[i]: i for i in modulealias_reverse.keys()}
         log.info("Compiling modules")
+        moduleprefixes={}
         for module in modules:
-            code, calls, handles, c_func, name, desc, prefix, file_name = module
+            code, calls, handles, c_func, name, desc, prefix, file_name, msettings = module
+            moduleprefixes.update({prefix:name})
+            if name == '':
+                continue
             compiled_modules += f'''--{name}: {desc}
     
     {code.strip()}
@@ -172,25 +178,25 @@ def generate(path: Path, extract=True, http_port=1000, update=False, write_full_
     '''
             for oname in calls.keys():
                 names = calls[oname]
-                for name in names:
+                for name_t in names:
                     if oname in callbacks.keys():
                         callbacks[oname].append(name)
                     else:
-                        callbacks.update({oname: [name]})
+                        callbacks.update({oname: [name_t]})
             for oname in handles.keys():
                 names = handles[oname]
-                for name in names:
+                for name_t in names:
                     if oname in to_handle.keys():
-                        to_handle[oname].append(name)
+                        to_handle[oname].append(name_t)
                     else:
-                        to_handle.update({oname: [name]})
+                        to_handle.update({oname: [name_t]})
             for oname in c_func.keys():
                 names = c_func[oname]
-                for name in names:
+                for name_t in names:
                     if oname in functions.keys():
-                        functions[oname].append(name)
+                        functions[oname].append(name_t)
                     else:
-                        functions.update({oname: [name]})
+                        functions.update({oname: [name_t]})
         compiled_modules = compiled_modules.strip()
         callback_defs = "\n\n--callback setup\n\n"
 
@@ -203,20 +209,26 @@ def generate(path: Path, extract=True, http_port=1000, update=False, write_full_
         script = ''
         script += compiled_modules
         script += callback_defs
-
         if 'httpGet' in functions.keys():
-            http = handlers.generate_handler('httpget', {'PORT':http_port}, [{'PREFIX':x.split('_')[1], 'NAME':x} for x in functions['httpGet']])
+            http = handlers.generate_handler('httpget', {'PORT': http_port}, [
+                {'PREFIX': x.split('_')[1], 'NAME': moduleprefixes[x.split('_')[1]].replace(' ','_'), 'PREFIXED': x} for x in
+                functions['httpGet']])
             script += http
         if 'httpReply' in to_handle.keys():
-            http = handlers.generate_handler('httpreply', {'PORT':http_port}, [{'PREFIX':x.split('_')[1], 'NAME':x} for x in to_handle['httpReply']])
+            http = handlers.generate_handler('httpreply', {'PORT': http_port}, [
+                {'PREFIX': x.split('_')[1].replace(' ','_'), 'NAME': moduleprefixes[x.split('_')[1]].replace(' ','_'), 'PREFIXED': x.replace(' ','_')} for x in
+                to_handle['httpReply']])
             script += http
-        load_extras(profile_path,log)
+        load_extras(profile_path, log)
         log.info("Clearing existing python extensions")
+        (server_path / 'py' / 'persistent').mkdir(parents=True, exist_ok=True)
+        shutil.move(f'{server_path}/py/persistent/',f'{server_path}/persistent/')
         shutil.rmtree(f'{server_path}/py/')
         try:
             serverutils.makedir(server_path)
         except Exception:
             log.warn("Unable to complete directory creation")
+        shutil.move( f'{server_path}/persistent/',f'{server_path}/py/')
         with open(f'{server_path}/bin/rom/data/missions/mscmodules/script.lua', 'w') as x:
             x.write(script)
         log.info("Discovering module python files")
@@ -229,41 +241,66 @@ def generate(path: Path, extract=True, http_port=1000, update=False, write_full_
         for i in settings.keys():
             if settings[i]['enabled']:
                 module_names.append(i)
-        extensions=[]
+        extensions = []
+        extended_modules = []
         for module in modules:
-            code, calls, handles, c_func, name, desc, prefix, file_name = module
-            has_ext=(Path('modules')/file_name/Path('module.py')).exists()
+            code, calls, handles, c_func, name, desc, prefix, file_name, msettings = module
+            has_ext = (file_name / Path('module.py')).exists()
             if has_ext:
                 extensions.append(prefix)
-                log.info(f"Found extension for \"{file_name}\"")
-                files=mdvalid.discover_extra_files(file_name)
-                code=mdvalid.get_code(file_name,files)
-                functions=[]
-                imports=[]
-                ext_has_handler=False
+                log.info(f"Found extension for \"{name}\"")
+                files = mdvalid.discover_extra_files(file_name)
+                code = mdvalid.get_code(file_name, files)
+                functions = []
+                imports = []
+                ext_has_handler = False
                 for i in code:
                     mods, funcs, has_handler = mdvalid.get_libs_and_functions(i)
-                    functions+=funcs
-                    imports+=mods
-                    ext_has_handler=ext_has_handler or has_handler
+                    functions += funcs
+                    imports += mods
+                    ext_has_handler = ext_has_handler or has_handler
                 if not ext_has_handler:
-                    log.warn(f'Python extension for module "{file_name}" does not contain a handler function.')
-                if len(functions)>0:
-                    log.warn(f"Module \"{file_name}\" uses {len(functions)} possibly malicious functions")
-                    log.warn("("+", ".join(functions)+")")
-                if len(imports)>0:
-                    log.warn(f"Module \"{file_name}\" uses {len(imports)} external libraries")
-                    log.warn("("+", ".join(imports)+")")
-                log.info(f"Installing extension(s) for \"{file_name}\"")
+                    log.warn(f'Python extension for module "{name}" does not contain a valid handler function.')
+                else:
+                    extended_modules.append(name.replace(' ','_'))
+                if len(functions) > 0:
+                    log.warn(f"Module \"{name}\" uses {len(functions)} possibly malicious functions")
+                    log.warn("(" + ", ".join(functions) + ")")
+                if len(imports) > 0:
+                    log.warn(f"Module \"{name}\" uses {len(imports)} external libraries")
+                    log.warn("(" + ", ".join(imports) + ")")
+                log.info(f"Installing extension(s) for \"{name}\"")
                 for file in files:
                     log.info(f"Copying {file}")
-                    if not os.path.exists(f'{server_path}/py/{prefix}'):
-                        os.mkdir(f'{server_path}/py/{prefix}')
-                    shutil.copyfile(f'modules/{file_name}/{file}', f'{server_path}/py/{prefix}/{file}')
+                    shutil.copyfile(f'{file_name}/{file}', f'{server_path}/py/{name.replace(" ","_")}_{file}')
         log.info('Building HTTP server')
-        svr=handlers.generate_handler('flask_handler',{'MODULE_LIST':str(extensions)},[],repl_head=True)
-        with open(f'{server_path}/py/server.py','w') as file:
+        svr = handlers.generate_handler('flask_handler', {'MODULE_LIST': str(extended_modules), 'PORT': http_port}, [],
+                                        repl_head=True)
+        with open(f'{server_path}/py/server.py', 'w') as file:
             file.write(svr)
+
+        log.info('Writing python configuration')
+        for module in modules:
+            code, calls, handles, c_func, name, desc, prefix, file_name, msettings = module
+            with open(f'{server_path}/py/{name.replace(" ","_")}_conf.json','w') as f:
+                json.dump(settings[name],f)
+            #name,msettings
+
+        log.info('Creating persistent data directories')
+        loadedmods=[]
+        for i in modules:
+            name=i[4]
+            (server_path / 'py' / 'persistent' / name.replace(' ', '_')).mkdir(parents=True, exist_ok=True)
+            loadedmods.append(name)
+        with open(server_path/'conf'/'modules.json','w') as modfile:
+            json.dump(loadedmods,modfile)
+        for i in os.scandir((server_path / 'py' / 'persistent')):
+            if i.is_file():
+                os.remove(i)
+            else:
+                if i.name not in [j.replace(' ','_') for j in module_names]:
+                    shutil.rmtree(i)
+
         log.info('Server generation complete')
         return str(server_path).split('/')
     except Exception as exc:

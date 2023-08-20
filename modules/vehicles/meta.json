@@ -1,0 +1,6 @@
+{
+  "id": "vehicles",
+  "description": "Low level vehicle tracking",
+  "dependencies": [],
+  "incompatibles": []
+}
