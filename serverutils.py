@@ -1,4 +1,6 @@
+import json
 import platform
+import shutil
 import subprocess
 from pathlib import Path
 from logger import Logger
@@ -64,3 +66,23 @@ def killserver(server):
 
 def isServerRunning(server):
     return getServerPID(server) or False
+
+def clearPersistent(server,module:str):
+    server = Path('servers') / server
+    shutil.rmtree(server / 'py' / 'persistent' / module.replace(' ','_'))
+    (server / 'py' / 'persistent' / module.replace(' ', '_')).mkdir()
+
+def getPersistent(server,module:str):
+    server = Path('servers') / server
+    persistents=[]
+    for i in os.walk((server / 'py' / 'persistent' / module.replace(' ','_'))):
+        dir=i[0]
+        files=i[2]
+        for j in files:
+            persistents.append(dir+'\\'+j)
+    return persistents
+
+def getModules(server):
+    server=Path('servers')/server
+    with open(server/'conf'/'modules.json') as modfile:
+        return json.load(modfile)

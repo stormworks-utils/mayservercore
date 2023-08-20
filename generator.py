@@ -167,7 +167,7 @@ def generate(path: Path, extract=True, http_port=1000, update=False, write_full_
         log.info("Compiling modules")
         moduleprefixes={}
         for module in modules:
-            code, calls, handles, c_func, name, desc, prefix, file_name = module
+            code, calls, handles, c_func, name, desc, prefix, file_name, msettings = module
             moduleprefixes.update({prefix:name})
             if name == '':
                 continue
@@ -221,11 +221,14 @@ def generate(path: Path, extract=True, http_port=1000, update=False, write_full_
             script += http
         load_extras(profile_path, log)
         log.info("Clearing existing python extensions")
+        (server_path / 'py' / 'persistent').mkdir(parents=True, exist_ok=True)
+        shutil.move(f'{server_path}/py/persistent/',f'{server_path}/persistent/')
         shutil.rmtree(f'{server_path}/py/')
         try:
             serverutils.makedir(server_path)
         except Exception:
             log.warn("Unable to complete directory creation")
+        shutil.move( f'{server_path}/persistent/',f'{server_path}/py/')
         with open(f'{server_path}/bin/rom/data/missions/mscmodules/script.lua', 'w') as x:
             x.write(script)
         log.info("Discovering module python files")
@@ -241,7 +244,7 @@ def generate(path: Path, extract=True, http_port=1000, update=False, write_full_
         extensions = []
         extended_modules = []
         for module in modules:
-            code, calls, handles, c_func, name, desc, prefix, file_name = module
+            code, calls, handles, c_func, name, desc, prefix, file_name, msettings = module
             has_ext = (file_name / Path('module.py')).exists()
             if has_ext:
                 extensions.append(prefix)
@@ -269,12 +272,35 @@ def generate(path: Path, extract=True, http_port=1000, update=False, write_full_
                 log.info(f"Installing extension(s) for \"{name}\"")
                 for file in files:
                     log.info(f"Copying {file}")
-                    shutil.copyfile(f'{file_name}/{file}', f'{server_path}/py/{name}_{file}')
+                    shutil.copyfile(f'{file_name}/{file}', f'{server_path}/py/{name.replace(" ","_")}_{file}')
         log.info('Building HTTP server')
         svr = handlers.generate_handler('flask_handler', {'MODULE_LIST': str(extended_modules), 'PORT': http_port}, [],
                                         repl_head=True)
         with open(f'{server_path}/py/server.py', 'w') as file:
             file.write(svr)
+
+        log.info('Writing python configuration')
+        for module in modules:
+            code, calls, handles, c_func, name, desc, prefix, file_name, msettings = module
+            with open(f'{server_path}/py/{name.replace(" ","_")}_conf.json','w') as f:
+                json.dump(settings[name],f)
+            #name,msettings
+
+        log.info('Creating persistent data directories')
+        loadedmods=[]
+        for i in modules:
+            name=i[4]
+            (server_path / 'py' / 'persistent' / name.replace(' ', '_')).mkdir(parents=True, exist_ok=True)
+            loadedmods.append(name)
+        with open(server_path/'conf'/'modules.json','w') as modfile:
+            json.dump(loadedmods,modfile)
+        for i in os.scandir((server_path / 'py' / 'persistent')):
+            if i.is_file():
+                os.remove(i)
+            else:
+                if i.name not in [j.replace(' ','_') for j in module_names]:
+                    shutil.rmtree(i)
+
         log.info('Server generation complete')
         return str(server_path).split('/')
     except Exception as exc:
